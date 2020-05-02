@@ -4,15 +4,7 @@ from bs4 import BeautifulSoup
 import time
 import requests
 import smtplib, ssl
-
-# search options
-city = "Norrkoping" # city to search in
-rooms = [1, 2]      # acceptable number of rooms
-maxRent = 10000     # maximum acceptable rent
-minSpace = 50       # minimum acceptable space (sq. meters)
-your_email = "lukpohl3@gmail.com"
-
-URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
+import sys
 
 def notify_user(apartment_dict, apartment_ID):
     link = "https://kvalster.se/" + city + "/Uthyres/Lägenheter/" + apartment_ID
@@ -46,8 +38,27 @@ def get_apartments():
 
     return apartment_dict
 
+# search options
+city = "Norrkoping" # city to search in
+rooms = [1, 2]      # acceptable number of rooms
+maxRent = 10000     # maximum acceptable rent
+minSpace = 50       # minimum acceptable space (sq. meters)
+your_email = "lukpohl3@gmail.com"
+
+URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
+
 apartment_dict = get_apartments()
 
+startTime = time.time()
+
+search_count = 0
+
+print("searching on Kvalster.se for apartments in " + city)
+print("num rooms: " + ' or '.join([str(room) for room in rooms]))
+print("max rent: ", maxRent, "kr")
+print("min space:", minSpace, "kvm")
+print("mailing new apartments to " + your_email + "\n")
+                                
 while True:
     apartments_found = get_apartments()
     
@@ -56,6 +67,8 @@ while True:
             apartment_dict[key] = apartments_found[key]
             notify_user(apartment_dict, key)
 
-    print("searching ...")
-            
+    output = "[ uptime: " + str(time.strftime('%H:%M:%S', time.gmtime(round(time.time() - startTime)))) + " ]" + " searching ..."
+    
+    sys.stdout.write("%s   \r" % (output) )
+
     time.sleep(30)
