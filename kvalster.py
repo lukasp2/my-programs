@@ -59,7 +59,6 @@ def get_apartments():
 
 # log all apartments found initially { apartment_ID : apartment_info }
 apartment_dict = get_apartments()
-# apartment_dict = {}
 
 while True:
     apartments_found = get_apartments()

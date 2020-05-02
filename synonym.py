@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 if len(sys.argv) != 2:
-    print('invalid number of arguments')
+    print('Usage: ./synonyms [word]')
     exit()
 
 word = str(sys.argv[1])
