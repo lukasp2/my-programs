@@ -45,20 +45,18 @@ maxRent = 10000     # maximum acceptable rent
 minSpace = 50       # minimum acceptable space (sq. meters)
 your_email = "lukpohl3@gmail.com"
 
-URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
-
-apartment_dict = get_apartments()
-
-startTime = time.time()
-
-search_count = 0
-
 print("searching on Kvalster.se for apartments in " + city)
 print("num rooms: " + ' or '.join([str(room) for room in rooms]))
 print("max rent: ", maxRent, "kr")
 print("min space:", minSpace, "kvm")
 print("mailing new apartments to " + your_email + "\n")
                                 
+URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
+
+apartment_dict = get_apartments()
+
+startTime = time.time()
+
 while True:
     apartments_found = get_apartments()
     

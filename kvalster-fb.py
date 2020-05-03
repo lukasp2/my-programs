@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -7,20 +8,11 @@ from bs4 import BeautifulSoup
 import fbchat 
 from getpass import getpass 
 
-# search options
-city = "Norrkoping"
-rooms = [1, 2]
-maxRent = 10000
-minSpace = 50
-
 # facebook (see general settings on facebook)
 username = "patte.hatt"
 real_name = "Lukas Pohlman"
 client = fbchat.Client(username, getpass())
 # if you have two factor authentication enabled (2FA), you need to add a key to your fb account
-
-# query URL
-URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
 
 # sends notification to user
 def notify_user(apartment_dict, apartment_ID):
@@ -31,11 +23,7 @@ def notify_user(apartment_dict, apartment_ID):
 
     friend = client.searchForUsers(real_name)[0]
     sent = client.send(fbchat.models.Message(msg), friend.uid)
-    
-    if sent:
-        print("Message sent successfully!")
-        
-# returns all apartments found
+
 def get_apartments():
     apartment_dict = {}
 
@@ -57,18 +45,35 @@ def get_apartments():
 
     return apartment_dict
 
-# log all apartments found initially { apartment_ID : apartment_info }
+# search options
+city = "Norrkoping" # city to search in
+rooms = [1, 2]      # acceptable number of rooms
+maxRent = 10000     # maximum acceptable rent
+minSpace = 50       # minimum acceptable space (sq. meters)
+your_email = "lukpohl3@gmail.com"
+
+print("searching on Kvalster.se for apartments in " + city)
+print("num rooms: " + ' or '.join([str(room) for room in rooms]))
+print("max rent: ", maxRent, "kr")
+print("min space:", minSpace, "kvm")
+print("sending fb-message to " + real_name + "\n")
+                                
+URL = "https://kvalster.se/" + city + "/Uthyres/Lägenheter?" + "Rum=" + ','.join([str(room) for room in rooms ]) + "&maxHyra=" + str(maxRent) + "&minYta=" + str(minSpace) + "&maxListad=5"
+
 apartment_dict = get_apartments()
+
+startTime = time.time()
 
 while True:
     apartments_found = get_apartments()
     
-    # find apartments stored in apartments_found that is not stored in apartments_dict
     for key in apartments_found.keys():
         if key not in apartment_dict.keys():
             apartment_dict[key] = apartments_found[key]
             notify_user(apartment_dict, key)
 
-    print("searching ...")
-            
+    output = "[ uptime: " + str(time.strftime('%H:%M:%S', time.gmtime(round(time.time() - startTime)))) + " ]" + " searching ..."
+    
+    sys.stdout.write("%s   \r" % (output) )
+
     time.sleep(30)
