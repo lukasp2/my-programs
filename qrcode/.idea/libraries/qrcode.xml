@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="qrcode">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/core-3.4.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/javase-3.4.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/pqScan.BarcodeReader.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

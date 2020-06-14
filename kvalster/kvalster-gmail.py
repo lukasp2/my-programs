@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from bs4 import BeautifulSoup
+import notify2
 import time
 import requests
 import smtplib, ssl
@@ -9,21 +10,36 @@ import sys
 def notify_user(apartment_dict, apartment_ID):
     link = "https://kvalster.se/" + city + "/Uthyres/Lägenheter/" + apartment_ID
     info = '\n'.join(apartment_dict[apartment_ID]);
-    msg = "Ny lägenhet hittad på kvalster!\n" + info + '\n' + link + '\n'
-    print(msg)
+    msg = "Ny lägenhet hittad på kvalster!\n" + info + '\n' + link
+    print(msg, '\n')
 
+    notify2.init("notifier")
+    n = notify2.Notification("New Apartment Found!", link)
+    n.set_urgency(notify2.URGENCY_CRITICAL)
+    n.show()
+    
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
     server.login("pohlmanbot@gmail.com", "medvindsg3")
-    server.sendmail("pohlmanbot@gmail.com", your_email, msg.encode('utf-8'))
+    try:
+        print("1")
+        server.sendmail("pohlmanbot@gmail.com", your_email, msg.encode('utf-8'))
+        print("2")
+    except RuntimeError:
+        print("Error occured, aborting ...")
+            
     server.quit()
     
 def get_apartments():
     apartment_dict = {}
 
     html_doc = requests.get(URL)
-    soup = BeautifulSoup(html_doc.text, 'html.parser')
-    results = soup.find_all('a')
 
+    print("3")
+    soup = BeautifulSoup(html_doc.text, 'html.parser')
+    print("4")
+    results = soup.find_all('a')
+    print("5")
+    
     for result in results[2:-4]:
         line = str(result).split("/Lägenheter/")[1]
         line = line.replace("\">", " ").replace("</a>", "").replace("<br/>", " ")
@@ -42,7 +58,7 @@ def get_apartments():
 city = "Norrkoping" # city to search in
 rooms = [1, 2]      # acceptable number of rooms
 maxRent = 10000     # maximum acceptable rent
-minSpace = 50       # minimum acceptable space (sq. meters)
+minSpace = 40       # minimum acceptable space (sq. meters)
 your_email = "lukpohl3@gmail.com"
 
 print("searching on Kvalster.se for apartments in " + city)
