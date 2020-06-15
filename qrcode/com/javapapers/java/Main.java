@@ -1,11 +1,8 @@
 package com.javapapers.java;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.stream.Stream;
 
 import com.google.zxing.NotFoundException;
 
@@ -15,24 +12,25 @@ public class Main {
 		QRImageHandler qrImageHandler = new QRImageHandler();
 
 		//works
-		ArrayList<String> filenames = qrImageHandler.getFilesInDir("/home/lukas/Desktop/qrcode/QRscreenshots/nkpg-rim/");
-		qrImageHandler.setQRPosAndSize(0,0,200,200);
+		//ArrayList<String> filenames = qrImageHandler.getFilesInDir("QRscreenshots/nkpg-rim/");
+		//qrImageHandler.setQRPosAndSize(0,0,200,200, 0);
 
-		//qrImageHandler.setQRPosAndSize(130,414,378,378)
-		//ArrayList<String> filenames = qrImageHandler.getFilesInDir("/home/lukas/Desktop/qrcode/QRscreenshots/rim-nkpg/");
+		qrImageHandler.setQRPosAndSize(130,414,378,378, 2);
+		ArrayList<String> filenames = qrImageHandler.getFilesInDir("QRscreenshots/rim-nkpg/");
 
 		ArrayList<ArrayList<Byte>> QRBytes = new ArrayList<>();
 		for (String filename : filenames) {
-			//QRBytes.add(qrImageHandler.getQRBytes2(filename));
-			QRBytes.add(qrImageHandler.getQRBytes(filename));
-			break;
+			System.out.println(filename);
+			BufferedImage image = qrImageHandler.getImage(filename);
+			qrImageHandler.displayImage(image);
+			QRBytes.add(qrImageHandler.getQRBytes(image));
 		}
 
 		for (int i = 0; i < QRBytes.size(); ++i) {
 			System.out.println("QR code " + i + " bytes: " + QRBytes.get(i));
 			System.out.println("QR code " + i + " length: " + QRBytes.get(i).size() + "\n");
 		}
-/*
+
 		ArrayList<Byte> matchingBytes = getMatchingBytes(QRBytes.get(0), QRBytes.get(1));
 		if (QRBytes.size() > 2) {
 			for (int i = 2; i < QRBytes.size(); ++i) {
@@ -45,8 +43,6 @@ public class Main {
 		for (int i = 0; i < matchingBytesInBlocks.size(); ++i) {
 			System.out.println(matchingBytesInBlocks.get(i));
 		}
-
- */
     }
 
 	// for two arrays a1 = [1,2,3,-1,-1,4,5,6,-1,7,8,9]

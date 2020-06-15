@@ -3,21 +3,15 @@ package com.javapapers.java;
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.oned.UPCEReader;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.pqscan.barcodereader.BarCodeType;
-import com.pqscan.barcodereader.BarcodeResult;
-import com.pqscan.barcodereader.BarcodeScanner;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.Buffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,52 +20,52 @@ import java.util.stream.Stream;
 
 public class QRImageHandler {
     private Rectangle posAndSize = new Rectangle();
+    private int rotation = 0;
 
-    public void setQRPosAndSize(int x, int y, int width, int height) {
+    public void setQRPosAndSize(int x, int y, int width, int height, int rotation) {
         this.posAndSize = new Rectangle(x,y,width,height);
+        this.rotation = rotation;
     }
 
     public BufferedImage getImage(String filepath) throws IOException {
         BufferedImage image = ImageIO.read(new FileInputStream(filepath));
         image = cutImage(image);
-        image = scaleImage(image, 200);
+        image = addPadding(image);
+        image = scaleImage(image, 1000);
+
+        for (int i = 0; i < rotation; ++i) { image = rotateImage90CW(image); }
 
         return image;
     }
 
-    public ArrayList<Byte> getQRBytes2(String filename) throws IOException {
+    public ArrayList<Byte> getQRBytes(BufferedImage image) throws NotFoundException {
+        Hashtable<DecodeHintType, Object> decodeHints = new Hashtable<>();
+        decodeHints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+        decodeHints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.of(BarcodeFormat.AZTEC));
+        decodeHints.put(DecodeHintType.PURE_BARCODE, Boolean.FALSE);
 
-        ArrayList<Byte> b = new ArrayList<>();
+        BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image)));
+        binaryBitmap.rotateCounterClockwise();
+        binaryBitmap.rotateCounterClockwise();
 
-        BarcodeResult[] results = BarcodeScanner.Scan(getImage(filename));
+        Result result = new MultiFormatReader().decode(binaryBitmap, decodeHints);
 
-        for (BarcodeResult result : results) {
-            System.out.println(result.getData());
-        }
-
-        return b;
-    }
-
-    public ArrayList<Byte> getQRBytes(String filename) throws NotFoundException, IOException {
         ArrayList<Byte> QRByteArrdata = new ArrayList<>();
-
-        for (byte b :  readQR(this.getImage(filename)).getRawBytes())
+        for (byte b :  result.getRawBytes())
             QRByteArrdata.add(b);
 
         return QRByteArrdata;
     }
 
-    public static Result readQR(BufferedImage image) throws NotFoundException {
-        Hashtable<DecodeHintType, Object> decodeHints = new Hashtable<>();
-        decodeHints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
-        //decodeHints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.allOf(BarcodeFormat.class));
-        decodeHints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.of(BarcodeFormat.AZTEC));
+    private BufferedImage rotateImage90CW(BufferedImage image) {
+        double rotation = Math.toRadians (90);
+        double locationX = image.getWidth() / 2;
+        double locationY = image.getHeight() / 2;
 
-        BinaryBitmap binaryBitmap = new BinaryBitmap(
-                new HybridBinarizer(
-                        new BufferedImageLuminanceSource(image)));
+        AffineTransform tx = AffineTransform.getRotateInstance(rotation, locationX, locationY);
+        AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
 
-        return new MultiFormatReader().decode(binaryBitmap, decodeHints);
+        return op.filter(image, null);
     }
 
     private BufferedImage cutImage(BufferedImage image) {
@@ -82,7 +76,20 @@ public class QRImageHandler {
         return Scalr.resize(image, size);
     }
 
-    private static void displayImage(BufferedImage image) {
+    // returns a the input image with a 50px white padding
+    public BufferedImage addPadding(BufferedImage image) {
+        int padding = 80;
+
+        BufferedImage paddingImage = new BufferedImage(image.getWidth() + padding * 2,image.getHeight() + padding * 2, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = paddingImage.createGraphics();
+        graphics.setPaint(new Color( 255, 255, 255 ));
+        graphics.fillRect(0, 0, paddingImage.getWidth(), paddingImage.getHeight());
+        graphics.drawImage(image,padding,padding,null);
+
+        return paddingImage;
+    }
+
+    public void displayImage(BufferedImage image) {
         ImageIcon icon = new ImageIcon(image);
         JFrame frame = new JFrame();
         frame.setLayout(new FlowLayout());
