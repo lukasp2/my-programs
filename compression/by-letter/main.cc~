@@ -1,0 +1,11 @@
+#include "compressor.h"
+
+int main() {
+    Compressor compressor{16};
+
+    compressor.compress("file.txt");
+
+    compressor.print();
+    
+    return 0;
+}

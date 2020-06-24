@@ -1,0 +1,116 @@
+#include "translator.h"
+
+#include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <set>
+#include <functional>
+#include <utility>
+
+using namespace std;
+
+Translator::Translator() {}
+
+Translator::~Translator() {}
+
+struct comp
+{
+    template<typename T>
+    bool operator()(const T& a, const T& b) const
+	{
+	    return a.first.length() * a.second > b.first.length() * b.second;
+	}
+};
+
+void Translator::encode(std::string const filename) {
+    // 1. sort file by words which consume most bytes
+    // 2. find words which are worth translating to a smaller word.
+    // 3. create a map containing those translations
+    // 4. rewrite the file with the translations.
+
+    map<string, int> unique_words{};
+    
+    char c{};
+    string s{};
+    
+    fstream fin(filename, fstream::in);
+
+    while (fin >> noskipws >> c) {
+	// make sure . and , is not included in the string
+	if (!isspace(c)) {
+	    s += c;
+	}
+	else {
+	    string whitespace{1, c};
+	    unique_words[s]++;
+	    unique_words[whitespace]++;
+	    s = string{};
+	}
+    }
+
+    set<pair<string, int>, comp> set(unique_words.begin(), unique_words.end());
+
+    // find words which are worth translating to a smaller word (the hash).
+    Hash hash{};
+    for (auto const &p: set) {
+        // make sure we dont translate to a word that is already used
+	while (unique_words.find(hash.get()) != unique_words.end()) ++hash;
+	
+	if (p.first.length() * p.second
+	    > hash.get().length() + p.first.length() + hash.get().length() * p.second) {
+
+	    cout << "{" << p.first << ", " << p.second << "} bytes: "
+		 << p.first.length() * p.second
+		 << " saving "
+		 << p.first.length() * p.second - (1 + p.first.length() + 1 * p.second)
+		 << " bytes" << endl;
+	    
+	    translations.insert(make_pair(p.first, hash.get()));
+	    ++hash;
+	}
+	
+    }
+
+    for (auto& p : translations) {
+	cout << p.first << " " << p.second << endl;
+    }
+}
+
+void Translator::decode() {
+
+}
+
+// HASH //
+std::string Hash::get() {
+    string s{};
+
+    for (int i : ascii_values) {
+	s += static_cast<char>(i);
+    }
+    
+    return s;
+}
+
+// helper for op++();
+void Hash::incr_pos(int idx) {
+    if (ascii_values.at(idx) == 255) {
+	ascii_values.at(idx) = 0;
+	if (idx != static_cast<int>(ascii_values.size() - 1)) {
+	    incr_pos(idx+1);
+	}
+	else {
+	    ascii_values.push_back(0);
+	}
+    }
+    else {
+	ascii_values.at(idx) += 1;
+    }
+}
+
+Hash& Hash::operator++() {
+    incr_pos(0);
+    
+    return *this;
+}
+    
