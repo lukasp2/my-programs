@@ -21,7 +21,7 @@ public:
 // the translated value
 class Hash {
 public:
-    Hash() {};
+    Hash(std::string filename) : filename{filename} {};
 
     Hash& operator++();
 
@@ -29,9 +29,14 @@ public:
 	
     std::string get();
 
-    void print_asciis() {std::cout << "["; for (int i : ascii_values) std::cout << i << " "; std::cout << "] "; };
-
+    void get_next();
+    
 private:
+    // strings that are not used in the text file and can be used as aliases
+    std::vector<std::string> free_strings{};
+
+    std::string filename{};
+    
     std::vector<int> ascii_values = { 0 };
 };
 
