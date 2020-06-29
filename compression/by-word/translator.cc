@@ -66,10 +66,11 @@ bool is_substr(string const& substr, string const& str) {
 	&& substr != str;
 }
 
+// Decides in what order the translations occur. E.x. if we have two words to translate:
+// 'he' and 'the', the translation of 'he' is done first because 'he' is a substring to 'the'
 void schedule_translations(list<pair<string, int>>& schedule, map<string, int>& unsorted_map) {
-    // 2. mark all root words
-    // 3. schedule all root words first
-    // 4. sort root words based on lucrativity
+    // 1. schedule all root words first
+    // 2. sort root words based on lucrativity
 
     // a list of lists:
     // list 1 contains root words
@@ -83,29 +84,39 @@ void schedule_translations(list<pair<string, int>>& schedule, map<string, int>& 
 	auto list_ptr = new list<pair<string, int>>{};
 	llist.push_back(list_ptr);
 
+	vector<pair<string, int>> to_remove{};
+
+	// we are looking for root words. root words needs to be translated first.
 	for (auto const& pair1 : unsorted_map) {
 	    string word_to_schedule{ pair1.first };
 	    bool root_word{ true };
 
-	    // if word_to_schedule is a root word, add to list
+	    // is there any word which is a substring to word_to_schedule?
+	    // in that case word_to_schedule is not a root word and should not be
+	    // scheduled right now.
+	    
 	    for (auto const& pair2 : unsorted_map) {
-		// p2 is a substring of word_to_schedule (=> word_to_schedule is not root)
 		if (is_substr(pair2.first, word_to_schedule)) {
 		    root_word = false;
 		    break;
 		}
 	    }
 
+	    // we have found a root word. it needs to be removed for the next iteration.
 	    if (root_word) {
-		list_ptr->push_back(pair1);
-		unsorted_map.erase(pair1.first);
+		to_remove.push_back(pair1);
 	    }
+	}
+
+	for (auto const& p : to_remove) {
+	    list_ptr->push_back(p);
+	    unsorted_map.erase(p.first);
 	}
     }
 
     int prio{ 1 };
     for (auto list_ptr : llist) {
-	cout << "words prio" << prio++ << endl;
+	cout << "words prio " << prio++ << endl;
 	
 	for (auto pair_ : *list_ptr) {
 	    cout << "'" + pair_.first + "'" << endl;
