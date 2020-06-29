@@ -37,7 +37,7 @@ private:
 
     std::string filename{};
     
-    std::vector<int> ascii_values = { 0 };
+    std::vector<int> ascii_values{32};
 };
 
 #endif

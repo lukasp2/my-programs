@@ -1,9 +1,11 @@
 #include "translator.h"
 
 #include <algorithm>
+#include <iterator>
 #include <fstream>
 #include <functional>
 #include <utility>
+#include <list>
 
 #include <iostream>
 #include <iomanip>
@@ -12,66 +14,109 @@ using namespace std;
 
 ////// ENCODING //////
 
-void get_candidate_words(map<string, int>& char_series, int series_size, string const& filename);
+void get_candidate_words(map<string, int>& char_series, string const& filename);
 
 int expected_savings(ulong str_length, int occurances, int hash_length);
 
 void get_char_series(map<string, int>& char_series, string const& filename, int series_size);
 
-struct comp {
-    template<typename T>
-    bool operator()(const T& a, const T& b) const {
-	return expected_savings(a.first.length(), a.second, 1)
-	    >= expected_savings(b.first.length(), b.second, 1);
-    }
-};
+//void schedule_translations(list<pair<string, int>>& list, map<string, int> const& unsorted_map);
+void schedule_translations(list<pair<string, int>>& list, map<string, int>& unsorted_map);
 
 void remove_obsolete_entries(map<string, int>& char_series, auto const& it);
     
 void create_translations(map<string, string>& translations,
-			 set<pair<string, int>, comp> const& set,
+			 list<pair<string, int>> const& list,
 			 string const& filename);
 
 void write_file(string const& filename, map<string, string> const& translations);
 
-template <typename T1, typename T2>
-void print_map(map<T1, T2> const& m) {
-    for (auto const& it : m)
-	cout << setw(5) << left << it.second << " \"" << it.first << "\"" << endl;
-}
-
 /* 
- * the idea is:
- * 1. find strings in the file which are long enough, or occurs frequently 
- *    enough, that makes it worth replacing those strings with a shorter alias.
- * 2. rewrite the file with the translations.
+ * the idea is to find strings in the file which are long enough, or occurs frequently 
+ * enough, that makes it worth replacing those strings with a shorter alias.
  */
 void Translator::encode(string const filename) {
+    // get all strings we would like to translate into char_series
+    // map<string, no. occurences in the file>
+    map<string, int> strings{};
+    get_candidate_words(strings, filename);
+    // rename: get words to translate
+    
+    // create list containing all strings sorted based on in what order they should
+    // be translated. Eg. the translation 'he ' -> '$' happens before ' the ' -> '@'
+    // so that instead they become 'he ' -> '$' and ' t$' -> '@'.
+    list<pair<string, int>> schedule;
+    schedule_translations(schedule, strings);
+    
+    // use the one-length-aliases in the most lucrative translations
+    // >> schedule all the root words first
+    // >> sort root words based on lucrativity
 
-    int series_size{ 2 };
-
-    // 1. count the number of avaiable 1-character-hashes there are.
-    // 2. when char_series reaches the same size as the no. of available hashes
-    // of size 1, sort the map according to bytes that would be saved.
-
-    // get all words of size series_size we would like to translate from file into char_series
-    map<string, int> char_series{};
-    get_candidate_words(char_series, series_size, filename);
-
-    // the set will list the candidate words sorted based on how many bytes the
-    // translation will save.
-    set<pair<string, int>, comp> set(char_series.begin(), char_series.end());
-
-    // stores candidate words and their translations 
+    // create a translation map for each word that should be translated
     map<string, string> translations{};
-    create_translations(translations, set, filename);
-
-    //write_file(translations);
+    //create_translations(translations, schedule, filename);
+    
+    // write to the file using the translation map
+    //write_file(translations, filename);
 }
 
-void get_candidate_words(map<string, int>& char_series,
-			 int series_size,
-			 string const& filename) {
+// returns true iif substr is a part of str but not equal to str
+bool is_substr(string const& substr, string const& str) {
+    return str.find(substr) != std::string::npos
+	&& substr != str;
+}
+
+void schedule_translations(list<pair<string, int>>& schedule, map<string, int>& unsorted_map) {
+    // 2. mark all root words
+    // 3. schedule all root words first
+    // 4. sort root words based on lucrativity
+
+    // a list of lists:
+    // list 1 contains root words
+    // list N contains the superwords for list N - 1 and composition words for list N + 1
+    for (auto i : schedule) cout << i.first << " ";
+
+    list< list<pair<string, int>>* > llist{};
+
+    while(unsorted_map.size() > 0) {
+
+	auto list_ptr = new list<pair<string, int>>{};
+	llist.push_back(list_ptr);
+
+	for (auto const& pair1 : unsorted_map) {
+	    string word_to_schedule{ pair1.first };
+	    bool root_word{ true };
+
+	    // if word_to_schedule is a root word, add to list
+	    for (auto const& pair2 : unsorted_map) {
+		// p2 is a substring of word_to_schedule (=> word_to_schedule is not root)
+		if (is_substr(pair2.first, word_to_schedule)) {
+		    root_word = false;
+		    break;
+		}
+	    }
+
+	    if (root_word) {
+		list_ptr->push_back(pair1);
+		unsorted_map.erase(pair1.first);
+	    }
+	}
+    }
+
+    int prio{ 1 };
+    for (auto list_ptr : llist) {
+	cout << "words prio" << prio++ << endl;
+	
+	for (auto pair_ : *list_ptr) {
+	    cout << "'" + pair_.first + "'" << endl;
+	}
+	cout << endl;
+    }
+}
+
+void get_candidate_words(map<string, int>& char_series, string const& filename) {
+    int series_size{2};
+    
     while (true) {
         // find series of characters of size series_size
 	map<string, int> all_series{};
@@ -164,40 +209,39 @@ int expected_savings(ulong str_length, int occurances, int hash_length) {
 }
 
 void create_translations(map<string, string>& translations,
-			 set<pair<string, int>, comp> const& set,
+			 list<pair<string, int>> const& list,
 			 string const& filename) {
     Hash hash{ filename };
 
-    // maps debugging info (word to bytes saved in the translation)
-    map<string, int> saved_bytes{};
+    cout << setw(8) << left << "occs." << setw(35) << left << "string"
+	 << setw(15) << left << "bytes consump."
+	 << setw(15) << left << "replacement"
+	 << setw(15) << left << "bytes consump."
+	 << setw(6) << left << "diff" << endl;
+    int tot_savings{};
     
     // find words which are worth translating to a smaller word (the hash).
-    for (auto const &p: set) {
+    for (auto const &p: list) {
         // find a hash value
 	hash.get_next();
-	
-	// if a translation would consume less bytes than not translating
-	if (expected_savings(p.first.length(), p.second, hash.get().size()) > 0) {
-	    saved_bytes.insert(make_pair(p.first, expected_savings(p.first.length(), p.second, hash.get().size())));
-	    
-	    translations.insert(make_pair(p.first, hash.get()));
-	}
-	// we will get to the else branch if the hash is too long for
-	// a translation to save bytes.
-	else {
+
+	// if a translation would consume more bytes than not translating
+	if (expected_savings(p.first.length(), p.second, hash.get().size()) <= 0)
 	    break;
-	}
+
+	translations.insert(make_pair(p.first, hash.get()));
+
+	cout << setw(8) << left << p.second
+	     << setw(35) << left << "'" + p.first + "'"
+	     << setw(15) << left << p.second *  p.first.length()
+	     << setw(15) << left << "'" + hash.get() + "'"
+	     << setw(15) << left << p.second *  hash.get().length() + hash.get().length() + p.first.length()
+	     << setw(6) << left << expected_savings(p.first.length(), p.second, hash.get().length())
+	     << endl;
+	tot_savings += expected_savings(p.first.length(), p.second, hash.get().length());
     }
 
-    int tot_saving{};
-    cout << "translations [from word -> to hash]" << endl;
-    for (auto& p : translations) {
-	string s = "\"" + p.first + "\" -> " + p.second;
-	cout << "\t" << setw(25) << left << s;
-	cout << "(saving " << saved_bytes[p.first] << " bytes)" << endl;
-	tot_saving += saved_bytes[p.first];
-    }
-    cout << "tot_svaving "<< tot_saving << endl;
+    cout << "\ntotal savings: " << tot_savings << " bytes" << endl;
 }
 
 void write_file(string const& filename, map<string, string> const& translations) {
@@ -261,17 +305,17 @@ void Hash::incr_pos(int idx) {
 }
 
 void Hash::get_next() {
-    fstream fs(this->filename, fstream::in);
-    string str{};
     char c{};
-
+    
     while (true) {
 	Hash::operator++();
 
 	string hashstr = Hash::get();
 	int strlen = hashstr.length();
+	string str{};
 	bool found_it = true;
-	
+
+	fstream fs(this->filename, fstream::in);
 	while(strlen-- && fs >> noskipws >> c) {
 	    str += string(1, c);
 	}
@@ -280,7 +324,7 @@ void Hash::get_next() {
 	    // if we have reached end of file
 	    if (!(fs >> noskipws >> c))
 		break;
-
+	    
 	    if (hashstr == str) {
 		found_it = false;
 		break;
@@ -288,11 +332,13 @@ void Hash::get_next() {
 	    
 	    // step string forward 
 	    str += string(1, c);
+	    
 	    str.erase(0, 1);
 	}
 
-	if (found_it)
+	if (found_it) {
 	    return;
+	}
     }
 }
 // .. //
