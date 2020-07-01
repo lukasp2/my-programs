@@ -49,88 +49,56 @@ void Translator::encode(string const filename) {
     //write_file(translations, filename);
 }
 
-// Decides in what order the translations occur. E.x. if we have two words to translate:
-// 'he' and 'the', the translation of 'he' is done first because 'he' is a substring to 'the'
+// Decides in what order the translations occur. Sort strings based on lucrativity
 void schedule_translations(list<pair<string, int>>& schedule,
 			   map<string, int>& unsorted_map,
 			   map<string, vector<string>>& dependencies) {
-    // 1. schedule all root words first
-    // 2. sort root words based on lucrativity
 
-    // a list of lists:
-    // list 1 contains root words
-    // list N contains the superwords for list N - 1 and composition words for list N + 1
-
-    // divide the strings in levels
-    vector< vector<pair<string, int>>* > vector_ptrs{};
-    while(unsorted_map.size() > 0) {
-	auto vector_ptr = new vector<pair<string, int>>{};
-	vector_ptrs.push_back(vector_ptr);
-
-	// we are looking for root words. root words needs to be translated first.
-	for (auto const& pair1 : unsorted_map) {
-	    string word_to_schedule{ pair1.first };
-	    bool root_word{ true };
-
-	    // is there any word which is a substring to word_to_schedule?
-	    // in that case word_to_schedule is not a root word and should not be
-	    // scheduled right now.	    
-	    for (auto const& pair2 : unsorted_map) {
-		if (is_substr(pair2.first, word_to_schedule)) {
-		    dependencies[word_to_schedule].push_back(pair2.first);
-		    root_word = false;
-		}
-	    }
-
-	    // we have found a root word. it needs to be removed for the next iteration.
-	    if (root_word) {
-		vector_ptr->push_back(pair1);
+    vector<pair<string, int>*> v{};
+    
+    // add dependecies
+    for (auto& pair1 : unsorted_map) {
+	// pair1.first = the word to schedule
+	for (auto& pair2 : unsorted_map) {
+	    if (is_substr(pair2.first, pair1.first)) {
+		//dependencies[pair1.first].push_back(pair2.first); old
+		dependencies[pair2.first].push_back(pair1.first);
 	    }
 	}
 
-	for (auto const& p : *vector_ptr) {
-	    unsorted_map.erase(p.first);
-	}
+	pair<string, int>* xy = new pair<string, int>;
+	xy = &pair1;
+	v.push_back(xy);
     }
 
-    // sorting the vectors based on lucrativeness
-    // ??? DOES THIS EVEN WORK? How do we know how lucrative it is?
-    for (auto vector_ptr : vector_ptrs) {
-	sort(vector_ptr->begin(), vector_ptr->end(),
-	     [](pair<string, int> const& p1, pair<string, int> const& p2) {
-		 return expected_savings(p1.first.length(), p1.second, 1)
-		     >= expected_savings(p2.first.length(), p2.second, 1);
-	     });
-    }
+    // sorting the vector based on lucrativeness
+    sort(v.begin(), v.end(),
+	 [](pair<string, int>* const p1, pair<string, int>* const p2) {
+	     return expected_savings(p1->first.length(), p1->second, 1)
+		 >= expected_savings(p2->first.length(), p2->second, 1);
+	 });
 
-    // sort and parse the dependencies
-    for (auto& p : dependencies) {
-	sort(p.second.begin(), p.second.end(),
-	     [](string const& s1, string const& s2) {
-		 return s1 > s2;
-	     });
-	
-	p.second.erase(unique(p.second.begin(), p.second.end()), p.second.end());
-    }
+    // go through v, for each depends. change its string and lucrativeness
+    // cannot convert
+    // std::pair<const std::__cxx11::basic_string<char>, int>*’ to
+    // std::pair<std::__cxx11::basic_string<char>, int>*’
 
     // construct the return value
-    for (auto const& vector_ptr : vector_ptrs) {
-	for (auto const& pair : *vector_ptr) {
-	    schedule.push_back(pair);
-	}
+    for (pair<string, int>* const pair_ptr : v) {
+	schedule.push_back(*pair_ptr);
     }
-
+    
     // print schedule and dependencies
     cout << setw(25) << left << "string"
 	 << setw(15) << left << "savings"
 	 << setw(20) << left << "dependencies" << endl;
     
-    for (auto & p : schedule) {
-	cout << setw(25) << left << "'" + p.first + "'"
-	     << setw(15) << left << expected_savings(p.first.length(), p.second, 1)
+    for (pair<string, int>* const p : v) {
+	cout << setw(25) << left << "'" + p->first + "'"
+	     << setw(15) << left << expected_savings(p->first.length(), unsorted_map[p->first], 1)
 	     << "[";
 	
-	for (string& s : dependencies[p.first])
+	for (string const& s : dependencies[p->first])
 	    cout << "'" << s << "', ";
 	
 	cout << "]" << endl;
