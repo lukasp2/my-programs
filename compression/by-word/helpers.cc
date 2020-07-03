@@ -13,9 +13,9 @@
 
 using namespace std;
 
-void get_char_series(map<string, int>& char_series,
-				 string const& filename,
-				 int series_size) {
+void get_strings(map<string, int>& strings,
+		 string const& filename,
+		 int series_size) {
     fstream fs(filename, fstream::in);
     char c;
     string str;
@@ -27,10 +27,10 @@ void get_char_series(map<string, int>& char_series,
 
     while (true) {
 	// if exists: add occurence, else make pair
-	if (char_series.find(str) != char_series.end())
-	    char_series[str]++;
+	if (strings.find(str) != strings.end())
+	    strings[str]++;
 	else 
-	    char_series.insert(make_pair(str, 1));
+	    strings.insert(make_pair(str, 1));
 
         // if we have reached end of file
 	if (!(fs >> noskipws >> c))
@@ -43,7 +43,7 @@ void get_char_series(map<string, int>& char_series,
 }
 
 // returns the number of bytes saved expected by a translation to a hash
-int expected_savings(ulong str_length, int occurances, int hash_length) {
+int expected_savings(ulong const str_length, int const occurances, int const hash_length) {
     // current amount of bytes consumed by the string
     ulong without_alias = str_length * occurances;
 
@@ -59,41 +59,44 @@ int expected_savings(ulong str_length, int occurances, int hash_length) {
     return without_alias - with_alias;
 }
 
-// ex. say "th" has 5 occurences and is a candidate for getting an alias in the encoded file,
-// but "the" was now discovered with atleast 4 occurences. Then the entry "th" is made obsolete
-// by the entry "the".
-void remove_obsolete_entries(map<string, int>& char_series, auto const& it) {
+// ex. say "th" has 5 occurences and is a candidate for getting an alias in the
+// encoded file, but "the" was now discovered with atleast 4 occurences. Then
+// the entry "th" is made obsolete by the entry "the".
+void remove_obsolete_entries(map<string, int>& strings, auto const& it) {
     string str = it->first;
     int occurences = it->second;
     
     string substr = str.substr(0, str.length() - 1);
-    if (char_series.find(substr) != char_series.end()
-	&& char_series[substr] - occurences < 2)
-	char_series.erase(substr);
-
+    if (strings.find(substr) != strings.end()
+	&& strings[substr] - occurences < 2) {
+	strings.erase(substr);
+    }
+	
     substr = str.substr(1, str.length());
-    if (char_series.find(substr) != char_series.end() && char_series[substr] - occurences < 2)
-	char_series.erase(substr);
+    if (strings.find(substr) != strings.end()
+	&& strings[substr] - occurences < 2) {
+	strings.erase(substr);
+    }
 }
 
-//void get_candidate_words(map<string, int>& char_series, string const& filename) {
-void get_strings_to_translate(map<string, int>& char_series, string const& filename) {
-    int series_size{2};
+//void get_candidate_words(map<string, int>& strings, string const& filename) {
+void get_strings_to_translate(map<string, int>& strings, string const& filename) {
+    int string_size{ 2 };
     
     while (true) {
         // find series of characters of size series_size
-	map<string, int> all_series{};
-	get_char_series(all_series, filename, series_size);
+	map<string, int> all_strings{};
+	get_strings(all_strings, filename, string_size);
 
 	bool found_word_to_replace = false;
 	
 	// remove all strings from the map not worthy of an alias
-	for (auto it = all_series.begin(); it != all_series.end(); ++it) {
+	for (auto it = all_strings.begin(); it != all_strings.end(); ++it) {
 	    if (expected_savings(it->first.length(), it->second, 1) > 0) {
 		
-		remove_obsolete_entries(char_series, it);
-		    
-		char_series.insert(make_pair(it->first, it->second));
+		remove_obsolete_entries(strings, it);
+
+		strings.insert(make_pair(it->first, it->second));
 
 		found_word_to_replace = true;
 	    }
@@ -104,7 +107,7 @@ void get_strings_to_translate(map<string, int>& char_series, string const& filen
 	
 	found_word_to_replace = false;
 	
-	++series_size;
+	++string_size;
     }
 }
 
@@ -123,6 +126,25 @@ void write_file(string const& filename, map<string, string> const& translations)
 	    s = translations.at(s);
 	}
 	cout << s;
+    }
+}
+
+// print schedule and dependencies
+void print_schedule(vector<pair<string*, vector<string*>>> const& schedule,
+		    map<string, int> const& strings) {
+    cout << setw(25) << left << "string" << setw(15) << left << "savings"
+	 << setw(20) << left << "dependencies" << endl;
+    
+    for (auto const& p : schedule) {
+	cout << setw(25) << left << "'" + *p.first + "'"
+	     << setw(15) << left
+	     << expected_savings(p.first->length(), strings.at(*p.first), 1)
+	     << "[";
+	
+	for (string* const s : p.second)
+	    cout << "'" << *s << "', ";
+	
+	cout << "]" << endl;
     }
 }
 

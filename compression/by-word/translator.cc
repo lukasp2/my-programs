@@ -14,10 +14,8 @@
 
 using namespace std;
 
-void schedule_translations(list<pair<string, int>>& list,
-			   map<string, int>& unsorted_map,
-			   map<string, vector<string>>& dependecies);
-
+void schedule_translations(map<string, int> const& strings,
+			   vector<pair<string*, vector<string*>>>& schedule);
 
 void create_translations(map<string, string>& translations,
 			 list<pair<string, int>> const& list,
@@ -35,75 +33,74 @@ void Translator::encode(string const filename) {
     get_strings_to_translate(strings, filename);
     
     // create list containing all strings sorted based on in what order they should
-    // be translated. Eg. the translation 'he ' -> '$' happens before ' the ' -> '@'
-    // so that instead they become 'he ' -> '$' and ' t$' -> '@'.
-    list<pair<string, int>> schedule;
-    map<string, vector<string>> dependecies{};
-    schedule_translations(schedule, strings, dependecies);
+    // be translated.
+    vector<pair<string*, vector<string*>>> schedule{}; // schedule + deps
+    schedule_translations(strings, schedule);
 
     // create a translation map for each word that should be translated
-    map<string, string> translations{};
-    create_translations(translations, schedule, dependecies, filename);
+    //map<string, string> translations{};
+    //create_translations(translations, schedule, dependecies, filename);
     
     // write to the file using the translation map
     //write_file(translations, filename);
 }
 
 // Decides in what order the translations occur. Sort strings based on lucrativity
-void schedule_translations(list<pair<string, int>>& schedule,
-			   map<string, int>& unsorted_map,
-			   map<string, vector<string>>& dependencies) {
+void schedule_translations(map<string, int> const& strings,
+			   vector<pair<string*, vector<string*>>>& schedule) {
 
-    vector<pair<string, int>*> v{};
-    
-    // add dependecies
-    for (auto& pair1 : unsorted_map) {
-	// pair1.first = the word to schedule
-	for (auto& pair2 : unsorted_map) {
-	    if (is_substr(pair2.first, pair1.first)) {
-		//dependencies[pair1.first].push_back(pair2.first); old
-		dependencies[pair2.first].push_back(pair1.first);
-	    }
-	}
-
-	pair<string, int>* xy = new pair<string, int>;
-	xy = &pair1;
-	v.push_back(xy);
-    }
-
-    // sorting the vector based on lucrativeness
-    sort(v.begin(), v.end(),
-	 [](pair<string, int>* const p1, pair<string, int>* const p2) {
-	     return expected_savings(p1->first.length(), p1->second, 1)
-		 >= expected_savings(p2->first.length(), p2->second, 1);
-	 });
-
-    // go through v, for each depends. change its string and lucrativeness
-    // cannot convert
-    // std::pair<const std::__cxx11::basic_string<char>, int>*’ to
-    // std::pair<std::__cxx11::basic_string<char>, int>*’
-
-    // construct the return value
-    for (pair<string, int>* const pair_ptr : v) {
-	schedule.push_back(*pair_ptr);
+    map<string, string*> s_map{};
+    for (auto const& p : strings) {
+	s_map[p.first] = new string{p.first};
     }
     
-    // print schedule and dependencies
-    cout << setw(25) << left << "string"
-	 << setw(15) << left << "savings"
-	 << setw(20) << left << "dependencies" << endl;
-    
-    for (pair<string, int>* const p : v) {
-	cout << setw(25) << left << "'" + p->first + "'"
-	     << setw(15) << left << expected_savings(p->first.length(), unsorted_map[p->first], 1)
-	     << "[";
+    // find dependecies and add them to vector "dependencies"
+    for (auto& p1 : strings) {
+	vector<string*> v{};
 	
-	for (string const& s : dependencies[p->first])
-	    cout << "'" << s << "', ";
-	
-	cout << "]" << endl;
+	for (auto& p2 : strings)
+	    if (is_substr(p1.first, p2.first))
+		v.push_back(s_map[p2.first]);
+
+	schedule.push_back(make_pair(s_map[p1.first], std::move(v)));
     }
+
+    auto schedule_comp =
+	[&strings](auto const& p1, auto const& p2) {
+	    return expected_savings(p2.first->length(), strings.at(*p2.first), 1)
+		< expected_savings(p1.first->length(), strings.at(*p1.first), 1);
+	};
+    
+    // sorting the schedule based on lucrativeness
+    sort(schedule.begin(), schedule.end(), schedule_comp);
+    
+    // go through schedule, for each depends. change its string and lucrativeness
+
+    // .... ///
+    // 1. replace " the " in the strings in .second
+
+    for (string* s : schedule.front().second) {
+	auto it = find(schedule.front().second.begin(),
+		       schedule.front().second.end(),
+		       schedule.front().first);
+    }
+	
+    *p.first = "$";
+
+    // 2. change lucrativity value of all strings which is a substring of " the "
+    // .... ///
+    
+    // print schedule
+    print_schedule(schedule, strings);
+
+    // destruct s_map
+    for (auto& p : s_map)
+	delete p.second;
+    
+    // This changes " the " to "$"
+    // *(schedule[0].first) = "$";
 }
+
 void create_translations(map<string, string>& translations,
 			 list<pair<string, int>> const& schedule,
 			 map<string, vector<string>> const& dependecies,

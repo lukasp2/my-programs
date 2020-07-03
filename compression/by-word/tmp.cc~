@@ -1,0 +1,18 @@
+#include <iostream>
+#include <string>
+#include <map>
+
+using namespace std;
+int main() {
+
+    map<string, int>* m_ptr = new map<string, int>{};
+
+    (*m_ptr)["hello"] = 1;
+
+    cout << (*m_ptr)["hello"] << endl;
+    //string* s_ptr = &
+    
+    delete m_ptr;
+    
+    return 0;
+}
