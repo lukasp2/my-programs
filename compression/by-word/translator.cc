@@ -14,12 +14,11 @@
 
 using namespace std;
 
-void schedule_translations(map<string, int> const& strings,
-			   vector<pair<string*, vector<string*>>>& schedule);
+void schedule_translations(map<string, int>& strings,
+			   vector<pair<string*, int>>& schedule);
 
 void create_translations(map<string, string>& translations,
 			 list<pair<string, int>> const& list,
-			 map<string, vector<string>> const& dependecies,
 			 string const& filename);
 
 /* 
@@ -34,78 +33,106 @@ void Translator::encode(string const filename) {
     
     // create list containing all strings sorted based on in what order they should
     // be translated.
-    vector<pair<string*, vector<string*>>> schedule{}; // schedule + deps
+    vector<pair<string*, int>> schedule{};
     schedule_translations(strings, schedule);
 
     // create a translation map for each word that should be translated
     //map<string, string> translations{};
-    //create_translations(translations, schedule, dependecies, filename);
+    //create_translations(translations, schedule, filename);
     
     // write to the file using the translation map
     //write_file(translations, filename);
 }
 
 // Decides in what order the translations occur. Sort strings based on lucrativity
-void schedule_translations(map<string, int> const& strings,
-			   vector<pair<string*, vector<string*>>>& schedule) {
-
+void schedule_translations(map<string, int>& strings,
+			   vector<pair<string*, int>>& schedule) {
+    // strings should be map<string*, int>??
+    
+    // allocate memory on heap for all strings
     map<string, string*> s_map{};
     for (auto const& p : strings) {
 	s_map[p.first] = new string{p.first};
     }
-    
-    // find dependecies and add them to vector "dependencies"
+
+    for (auto const& p : strings) {
+	schedule.push_back(
+	    make_pair(s_map[p.first],
+		      expected_savings(p.first.length(), p.second, 1)
+		));
+    }
+
+    // find dependecies
+    map<string*, vector<string*>> str_to_substr{}, substr_to_str{};
     for (auto& p1 : strings) {
-	vector<string*> v{};
-	
-	for (auto& p2 : strings)
+	for (auto& p2 : strings) {
 	    if (is_substr(p1.first, p2.first))
-		v.push_back(s_map[p2.first]);
-
-	schedule.push_back(make_pair(s_map[p1.first], std::move(v)));
+		substr_to_str[s_map[p1.first]].push_back(s_map[p2.first]);
+         	// replace below with str_to_substr[] here instead???
+	    
+	    else if (is_substr(p2.first, p1.first))
+		str_to_substr[s_map[p1.first]].push_back(s_map[p2.first]);
+	}
     }
 
-    auto schedule_comp =
-	[&strings](auto const& p1, auto const& p2) {
-	    return expected_savings(p2.first->length(), strings.at(*p2.first), 1)
-		< expected_savings(p1.first->length(), strings.at(*p1.first), 1);
-	};
-    
-    // sorting the schedule based on lucrativeness
-    sort(schedule.begin(), schedule.end(), schedule_comp);
-    
-    // go through schedule, for each depends. change its string and lucrativeness
+    print_schedule(schedule);
+        
+    // .... //
+    for (uint i{}; i < schedule.size(); ++i) {
 
-    // .... ///
-    // 1. replace " the " in the strings in .second
+	// sorting the schedule based on lucrativeness
+	sort(schedule.begin() + i, schedule.end(),
+	     [&strings] (auto const& p1, auto const& p2) {
+		 return p1.second > p2.second;
+	     });
 
-    for (string* s : schedule.front().second) {
-	auto it = find(schedule.front().second.begin(),
-		       schedule.front().second.end(),
-		       schedule.front().first);
-    }
+	print_schedule(schedule);
+
 	
-    *p.first = "$";
+	string* word = schedule[i].first;
+	
+	// replace *word in the superstrings
+	for (string* str : substr_to_str[word]) {
+	    // 1. find *word in *str and replace with "$"
+	    replaceAll(*str, *word, "$");
+	    
+	    // 2. change lucrativity of *str in schedule
+	    schedule[str].second
+		= expected_savings(str->length(), strings[*str].second, 1);
+	}
 
-    // 2. change lucrativity value of all strings which is a substring of " the "
-    // .... ///
+	// change occurences of substrings
+	for (string* substr : str_to_substr[word]) {
+	    strings[*substr] -= strings[*word];
+	    
+	    // re-calibrate lucrativeness of the substrings
+	    schedule[substring].second
+		= expected_savings(substr->length(), strings[*substr].second, 1);
+	}
+
+	// translate
+	*word = "$";
+	
+	break;
+    }
+    // .... //
     
     // print schedule
-    print_schedule(schedule, strings);
+    print_schedule(schedule);
+
+    print_deps(str_to_substr);
+    print_deps(substr_to_str);
 
     // destruct s_map
-    for (auto& p : s_map)
-	delete p.second;
-    
-    // This changes " the " to "$"
-    // *(schedule[0].first) = "$";
+    //for (auto& p : s_map)
+    //	delete p.second;
 }
 
 void create_translations(map<string, string>& translations,
 			 list<pair<string, int>> const& schedule,
-			 map<string, vector<string>> const& dependecies,
 			 string const& filename) {
-    for (auto p : dependecies) {}
+    // This changes " the " to "$"
+    // *(schedule[0].first) = "$";
     
     Hash hash{ filename };
 
@@ -138,8 +165,8 @@ void create_translations(map<string, string>& translations,
 		 << setw(15) << left << p.second *  hash.get().length() + hash.get().length() + p.first.length()
 		 << setw(6) << left << expected_savings(p.first.length(), p.second, hash.get().length())
 		 << endl;
+	    tot_savings += expected_savings(p.first.length(), p.second, hash.get().length());
 	}
-	tot_savings += expected_savings(p.first.length(), p.second, hash.get().length());
     }
 
     if (print_translations) {

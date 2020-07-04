@@ -130,26 +130,48 @@ void write_file(string const& filename, map<string, string> const& translations)
 }
 
 // print schedule and dependencies
-void print_schedule(vector<pair<string*, vector<string*>>> const& schedule,
-		    map<string, int> const& strings) {
-    cout << setw(25) << left << "string" << setw(15) << left << "savings"
-	 << setw(20) << left << "dependencies" << endl;
+void print_schedule(vector<pair<string*, int>> const& schedule) {
+    cout << setw(35) << left << "string" << setw(15) << left << "savings" << endl;
     
     for (auto const& p : schedule) {
-	cout << setw(25) << left << "'" + *p.first + "'"
-	     << setw(15) << left
-	     << expected_savings(p.first->length(), strings.at(*p.first), 1)
-	     << "[";
-	
-	for (string* const s : p.second)
-	    cout << "'" << *s << "', ";
-	
+	cout << setw(35) << left << "'" + *p.first + "'"
+	     << setw(15) << left << p.second << endl;
+    }
+}
+
+void print_deps(map<string*, vector<string*>> const& deps) {
+    cout << endl << endl << setw(35) << left << "string"
+	 << setw(15) << left << "deps" << endl;
+
+    for (auto const& p : deps) {
+	cout << setw(35) << left << "'" + *p.first + "'";
+
+	cout << "[";
+	for (string* s : p.second) {
+	    cout << *s + ", ";
+	}
 	cout << "]" << endl;
     }
 }
 
+// in string str: replace substring "from" with substring "to"
+void replaceAll(string& str, string const& from_str, string const& to_str) {
+    if(from_str.empty())
+        return;
+    
+    auto found = str.find(from_str, 0);
+    while(found != std::string::npos) {
+        str.replace(found, found + from_str.length(), to_str);
+	
+	// in case 'to' contains 'from', like replacing 'x' with 'yx'
+        found += to_str.length();
+
+	found = str.find(from_str, found);
+    }
+}
+
 ////// DECODING //////
-void Translator::decode(std::string const filename) {
+void Translator::decode(string const filename) {
     string s = filename;
     s = "";
     cout << s << endl;
