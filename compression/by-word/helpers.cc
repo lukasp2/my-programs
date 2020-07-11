@@ -175,11 +175,76 @@ void Translator::update_substrs_n_sprstrs() {
     }
 }
 
-void Translator::write_file() {
+// remove str's from schedule with lucra <= 0
+void Translator::refactor_schedule() {
+    auto it = remove_if(schedule.begin(), schedule.end(),
+			     [&lucrativity = lucrativity] (string* const s) {
+				 return lucrativity[s] <= 0;
+			     });
 
+    schedule.erase(it, schedule.end());
+
+    // sorting the schedule based on lucrativeness
+    sort(schedule.begin(), schedule.end(),
+	 [&lucrativity = lucrativity] (string* const s1, string* const s2) {
+	     return lucrativity[s1] > lucrativity[s2];
+	 });
 }
 
-// print schedule and dependencies
+void Translator::replace_str_in_schedule(int schedule_pos, string const hash_val) {    
+    string* word = schedule[schedule_pos];
+    string old_word = *word;
+    *word = hash_val;
+    
+    // replace *word in the superstrings and update lucra
+    for (string* str : substr_to_str[word]) {
+	// 1. find *word in *str and replace with hashval
+	replaceAll(*str, old_word, hash_val);
+	
+	// 2. change lucrativity of *str
+	lucrativity[str] = expected_savings(str->length(), occurences[str], 1);
+    }
+    
+    for (string* substr : str_to_substr[word]) {
+	occurences[substr] -= occurences[word];
+	    
+	lucrativity[substr]
+	    = expected_savings(substr->length(), occurences[substr], 1);
+    }
+    
+    // as we have now changed a lot, update substrings and superstrings
+    update_substrs_n_sprstrs();
+}
+
+// create a translation map for each word that should be translated
+void Translator::create_translations() {
+    Hash hash{ filename };
+
+    refactor_schedule();
+	
+    // translate the strings in schedule
+    for (uint idx{}; idx < schedule.size(); ++idx) {
+	hash.get_next();
+	
+	translations.push_back(make_pair(*schedule[idx], hash.get()));
+
+	replace_str_in_schedule(idx, hash.get());
+
+	refactor_schedule();
+    }
+
+    print_translations();
+}
+
+// additionals: prints
+void Translator::print_file() {
+    std::ifstream f(filename);
+
+    if (f.is_open())
+        std::cout << f.rdbuf();
+}
+
+
 void Translator::print_schedule() {
     cout << endl;
     cout << setw(35) << left << "string"
@@ -197,7 +262,7 @@ void Translator::print_schedule() {
 void Translator::print_translations() {
     cout << "TRANSLATIONS" << endl;
     for (auto const& p : translations) {
-	cout << setw(35) << left << p.first << setw(20) << left << p.second << endl;
+	cout << setw(35) << left << "'" + p.first + "'" << p.second << endl;
     }
     cout << endl;
 }
@@ -218,11 +283,3 @@ void Translator::print_deps(map<string*, vector<string*>> const& deps) {
 	}
     }
 }
-
-////// DECODING //////
-void Translator::decode(string filename) {
-    filename = "";
-}
-// .. //
-
-

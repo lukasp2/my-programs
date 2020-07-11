@@ -1,12 +1,19 @@
 #include "translator.h"
 #include <iostream>
 
+using namespace std;
 int main() {
-    Translator translator{"file.txt"};
+    Translator translator{};
     
-    translator.encode();
+    translator.encode("file.txt");
 
-    translator.decode("encoded_file.txt");
+    cout << "ENCODED FILE" << endl;
+    translator.print_file();
+
+    translator.decode("file.txt");
+
+    cout << "DECODED FILE" << endl;
+    translator.print_file();
 
     return 0;
 }

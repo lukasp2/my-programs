@@ -7,23 +7,22 @@
 
 class Translator {
 public:
-    Translator(std::string filename) : filename{ filename } {}
+    Translator() {};
 
     ~Translator();
     
-    void encode();
+    void encode(std::string const filename);
 
     // helpers: encode()
     void get_strings_to_translate();
-
-    // helpers: encode(): get_strings_to_translate()
-    void get_all_strings(std::map<std::string, int>& strings, int series_size);
-    void remove_obsolete_entries(std::string const& str, int const occurences);
-
-    // helpers: encode()
     void find_dependencies();
     void create_schedule();
     void create_translations();
+    void write_file();
+    
+    // helpers: encode(): get_strings_to_translate()
+    void get_all_strings(std::map<std::string, int>& strings, int series_size);
+    void remove_obsolete_entries(std::string const& str, int const occurences);
 
     // helpers: encode(): create_translations()
     void replace_str_in_schedule(int schedule_pos, std::string const hash_val);
@@ -31,16 +30,13 @@ public:
     void refactor_schedule();
     // .... //
 
-    void decode(std::string filename);
+    void decode(std::string const filename);
     
-    // helpers: decode()
-    void write_file();
-    // .... //
-
     // additionals
     void print_schedule();
     void print_deps(std::map<std::string*, std::vector<std::string*>> const& deps);
     void print_translations();
+    void print_file();
     
 private:
     std::string filename{};

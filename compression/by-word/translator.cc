@@ -18,7 +18,9 @@ using namespace std;
  * the idea is to find strings in the file which are long enough, or occurs frequently 
  * enough, that makes it worth replacing those strings with a shorter alias.
  */
-void Translator::encode() {
+void Translator::encode(string const filename) {
+    this->filename = filename;
+    
     get_strings_to_translate();
 
     find_dependencies();
@@ -27,71 +29,43 @@ void Translator::encode() {
 
     create_translations();
 
-    exit(1);
-    //write_file();
+    // free memory here
+    
+    write_file();
 }
 
-void Translator::replace_str_in_schedule(int schedule_pos, string const hash_val) {    
-    string* word = schedule[schedule_pos];
-    string old_word = *word;
-    *word = hash_val;
+void Translator::write_file() {
+    // for each translation in "translations", replace all occurences of p.first in file
+    // with p.second
+    for (pair<string, string> const& p: translations) {
     
-    // replace *word in the superstrings and update lucra
-    for (string* str : substr_to_str[word]) {
-	// 1. find *word in *str and replace with hashval
-	replaceAll(*str, old_word, hash_val);
+	fstream fs(filename, fstream::in);
+	char c;
+	string str;
 	
-	// 2. change lucrativity of *str
-	lucrativity[str] = expected_savings(str->length(), occurences[str], 1);
-    }
-    
-    for (string* substr : str_to_substr[word]) {
-	occurences[substr] -= occurences[word];
+	uint series_size = p.first.length();
+	
+	// construct string
+	while(series_size-- && fs >> noskipws >> c) {
+	    str += string(1, c);
+	}
+
+	while (true) {
+	    if (str == p.first) {
+		// replace str with p.second
+	    }
 	    
-	lucrativity[substr]
-	    = expected_savings(substr->length(), occurences[substr], 1);
+	    // if we have reached end of file
+	    if (!(fs >> noskipws >> c))
+		break;
+	
+	    // step string forward 
+	    str += string(1, c);
+	    str.erase(0, 1);
+	}
     }
-    
-    // as we have now changed a lot, update substrings and superstrings
-    update_substrs_n_sprstrs();
 }
 
-// remove str's from schedule with lucra <= 0
-void Translator::refactor_schedule() {
-    auto it = remove_if(schedule.begin(), schedule.end(),
-			     [&lucrativity = lucrativity] (string* const s) {
-				 return lucrativity[s] <= 0;
-			     });
-
-    schedule.erase(it, schedule.end());
-
-    // sorting the schedule based on lucrativeness
-    sort(schedule.begin(), schedule.end(),
-	 [&lucrativity = lucrativity] (string* const s1, string* const s2) {
-	     return lucrativity[s1] > lucrativity[s2];
-	 });
-}
-
-// create a translation map for each word that should be translated
-void Translator::create_translations() {
-    Hash hash{ filename };
-
-    refactor_schedule();
-	
-    // translate the strings in schedule
-    for (uint idx{}; idx < schedule.size(); ++idx) {
-	hash.get_next();
-	
-	translations.push_back(make_pair(*schedule[idx], hash.get()));
-
-	replace_str_in_schedule(idx, hash.get());
-
-	refactor_schedule();
-
-	print_translations();	
-    }
-
-    //print_schedule();
-
-    //print_translations();
+void Translator::decode(string const filename) {
+    string s = filename; s = ""; cout << s;
 }
