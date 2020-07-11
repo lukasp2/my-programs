@@ -2,9 +2,9 @@
 #include <iostream>
 
 int main() {
-    Translator translator{};
+    Translator translator{"file.txt"};
     
-    translator.encode("file.txt");
+    translator.encode();
 
     translator.decode("encoded_file.txt");
 

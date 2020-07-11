@@ -1,43 +1,64 @@
 #ifndef TRANSLATOR_H
 #define TRANSLATOR_H
 
-#include <utility>
 #include <string>
 #include <map>
 #include <vector>
-#include <set>
-
-#include <iostream>
 
 class Translator {
 public:
-    Translator() {}
+    Translator(std::string filename) : filename{ filename } {}
 
-    void encode(std::string const filename);
+    ~Translator();
+    
+    void encode();
 
-    void decode(std::string const filename);
-};
+    // helpers: encode()
+    void get_strings_to_translate();
 
-// the translated value
-class Hash {
-public:
-    Hash(std::string filename) : filename{filename} {};
+    // helpers: encode(): get_strings_to_translate()
+    void get_all_strings(std::map<std::string, int>& strings, int series_size);
+    void remove_obsolete_entries(std::string const& str, int const occurences);
 
-    Hash& operator++();
+    // helpers: encode()
+    void find_dependencies();
+    void create_schedule();
+    void create_translations();
 
-    void incr_pos(int idx);
-	
-    std::string get();
+    // helpers: encode(): create_translations()
+    void replace_str_in_schedule(int schedule_pos, std::string const hash_val);
+    void update_substrs_n_sprstrs();
+    void refactor_schedule();
+    // .... //
 
-    void get_next();
+    void decode(std::string filename);
+    
+    // helpers: decode()
+    void write_file();
+    // .... //
+
+    // additionals
+    void print_schedule();
+    void print_deps(std::map<std::string*, std::vector<std::string*>> const& deps);
+    void print_translations();
     
 private:
-    // strings that are not used in the text file and can be used as aliases
-    std::vector<std::string> free_strings{};
-
     std::string filename{};
+
+    // variables: encode(): get_strings_to_translate()
+    std::map<std::string, std::string*> str_ptrs{};
+    std::map<std::string*, int> occurences{};
+    std::map<std::string*, int> lucrativity{};
+
+    // variables: encode(): create_schedule()
+    std::vector<std::string*> schedule{};
+
+    // variables: encode(): find_dependencies()
+    std::map<std::string*, std::vector<std::string*>> str_to_substr{};
+    std::map<std::string*, std::vector<std::string*>> substr_to_str{};
     
-    std::vector<int> ascii_values{32};
+    // variables: encode(): create_translations()
+    std::vector<std::pair<std::string, std::string>> translations{};
 };
 
 #endif

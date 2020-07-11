@@ -1,21 +1,56 @@
-#include <map>
 #include <string>
 
-#include <algorithm>
-#include <iterator>
-#include <fstream>
-#include <functional>
-#include <utility>
-#include <list>
+// returns true iif substr is a part of str but not equal to str
+bool is_substr(string const& substr, string const& str) {
+    return str.find(substr) != string::npos && substr != str;
+}
 
-#include <iostream>
-#include <iomanip>
+// in string str: replace substring "from" with substring "to"
+void replaceAll(string& str, string const& from_str, string const& to_str) {
+    if(from_str.empty())
+        return;
 
-using namespace std;
+    auto substr_pos = str.find(from_str, 0);
+    while(substr_pos != std::string::npos) {
+        str.replace(substr_pos, from_str.length(), to_str);
+	
+	// in case 'to' contains 'from', like replacing 'x' with 'yx'
+        substr_pos += to_str.length();
 
-void get_strings(map<string, int>& strings,
-		 string const& filename,
-		 int series_size) {
+	substr_pos = str.find(from_str, substr_pos);
+    }
+}
+
+// returns the number of bytes saved expected by a translation to a hash
+int expected_savings(uint const str_length, int const occurances, int const hash_length) {
+    // current amount of bytes consumed by the string
+    uint without_alias = str_length * occurances;
+
+    // bytes required for the map entry if alias is used
+    uint map_entry_bytes = hash_length + str_length;
+
+    // amount of bytes consumed in the file if an alias is used
+    int alias_in_file_bytes = hash_length * occurances;
+
+    // total bytes consumed by an alias
+    int with_alias = map_entry_bytes + alias_in_file_bytes;
+        
+    return without_alias - with_alias;
+}
+
+Translator::~Translator() {
+    for (auto& p : str_ptrs)
+    	delete p.second;
+}
+
+// create a schedule which represents a queue for the translations
+void Translator::create_schedule() {
+    for (auto const& p : str_ptrs) {
+	schedule.push_back(str_ptrs[p.first]);
+    }
+}
+
+void Translator::get_all_strings(map<string, int>& strings, int series_size) {
     fstream fs(filename, fstream::in);
     char c;
     string str;
@@ -42,51 +77,50 @@ void get_strings(map<string, int>& strings,
     }
 }
 
-// returns the number of bytes saved expected by a translation to a hash
-int expected_savings(ulong const str_length, int const occurances, int const hash_length) {
-    // current amount of bytes consumed by the string
-    ulong without_alias = str_length * occurances;
-
-    // bytes required for the map entry if alias is used
-    ulong map_entry_bytes = hash_length + str_length;
-
-    // amount of bytes consumed in the file if an alias is used
-    int alias_in_file_bytes = hash_length * occurances;
-
-    // total bytes consumed by an alias
-    int with_alias = map_entry_bytes + alias_in_file_bytes;
-        
-    return without_alias - with_alias;
+// finds dependencies among the strings
+void Translator::find_dependencies() {
+    for (auto& p1 : str_ptrs) {
+	for (auto& p2 : str_ptrs) {
+	    if (is_substr(p1.first, p2.first)) {
+		substr_to_str[str_ptrs[p1.first]].push_back(str_ptrs[p2.first]);
+		str_to_substr[str_ptrs[p2.first]].push_back(str_ptrs[p1.first]);
+	    }
+	}
+    }
 }
 
 // ex. say "th" has 5 occurences and is a candidate for getting an alias in the
 // encoded file, but "the" was now discovered with atleast 4 occurences. Then
 // the entry "th" is made obsolete by the entry "the".
-void remove_obsolete_entries(map<string, int>& strings, auto const& it) {
-    string str = it->first;
-    int occurences = it->second;
+void Translator::remove_obsolete_entries(string const& str, int const occs) {
+    string substr{};
     
-    string substr = str.substr(0, str.length() - 1);
-    if (strings.find(substr) != strings.end()
-	&& strings[substr] - occurences < 2) {
-	strings.erase(substr);
+    substr = str.substr(0, str.length() - 1);
+    if (str_ptrs.find(substr) != str_ptrs.end()
+	&& occurences[str_ptrs[substr]] - occs < 2) {
+
+	occurences.erase(str_ptrs[substr]);
+	str_ptrs.erase(substr);
     }
 	
     substr = str.substr(1, str.length());
-    if (strings.find(substr) != strings.end()
-	&& strings[substr] - occurences < 2) {
-	strings.erase(substr);
+    if (str_ptrs.find(substr) != str_ptrs.end()
+	&& occurences[str_ptrs[substr]] - occs < 2) {
+	
+	occurences.erase(str_ptrs[substr]);
+	str_ptrs.erase(substr);
     }
 }
 
-//void get_candidate_words(map<string, int>& strings, string const& filename) {
-void get_strings_to_translate(map<string, int>& strings, string const& filename) {
+// get all strings we would like to translate in the file
+void Translator::get_strings_to_translate() {
     int string_size{ 2 };
     
+    // find series of characters of size series_size
     while (true) {
-        // find series of characters of size series_size
 	map<string, int> all_strings{};
-	get_strings(all_strings, filename, string_size);
+	
+	get_all_strings(all_strings, string_size);
 
 	bool found_word_to_replace = false;
 	
@@ -94,9 +128,11 @@ void get_strings_to_translate(map<string, int>& strings, string const& filename)
 	for (auto it = all_strings.begin(); it != all_strings.end(); ++it) {
 	    if (expected_savings(it->first.length(), it->second, 1) > 0) {
 		
-		remove_obsolete_entries(strings, it);
-
-		strings.insert(make_pair(it->first, it->second));
+		remove_obsolete_entries(it->first, it->second);
+		
+		str_ptrs[it->first] = new string{it->first};
+		
+		occurences[str_ptrs[it->first]] = it->second;
 
 		found_word_to_replace = true;
 	    }
@@ -109,151 +145,84 @@ void get_strings_to_translate(map<string, int>& strings, string const& filename)
 	
 	++string_size;
     }
-}
 
-// returns true iif substr is a part of str but not equal to str
-bool is_substr(string const& substr, string const& str) {
-    return str.find(substr) != std::string::npos
-	&& substr != str;
-}
-
-void write_file(string const& filename, map<string, string> const& translations) {
-    string s{};
-    fstream fin(filename, fstream::in);
-
-    while (fin >> s) {
-	if (translations.find(s) != translations.end()) {
-	    s = translations.at(s);
-	}
-	cout << s;
+    // fill lucrativeness map
+    for (auto const& it : str_ptrs) {
+	lucrativity[it.second] = expected_savings(it.first.length(), occurences[it.second], 1);
     }
+}
+
+// when a translation is made, str_to_substr and substr_to_str needs to be updated. 
+void Translator::update_substrs_n_sprstrs() {
+    for (string* s : schedule) {
+	if (str_to_substr.find(s) != str_to_substr.end()) {
+	    // looping through substrings of string s
+	    for (uint idx{}; idx < str_to_substr[s].size(); ++idx) {
+		if (!(is_substr(*str_to_substr[s][idx], *s))) {
+		    str_to_substr[s].erase(str_to_substr[s].begin() + idx);
+		}
+	    }
+	}
+	
+	if (substr_to_str.find(s) != substr_to_str.end()) {
+	    // looping through superstrings of string s
+	    for (uint idx{}; idx < substr_to_str[s].size(); ++idx) {
+		if (!(is_substr(*s, *substr_to_str[s][idx]))) {
+		    substr_to_str[s].erase(substr_to_str[s].begin() + idx);
+		}		
+	    }
+	}
+    }
+}
+
+void Translator::write_file() {
+
 }
 
 // print schedule and dependencies
-void print_schedule(vector<pair<string*, int>> const& schedule) {
-    cout << setw(35) << left << "string" << setw(15) << left << "savings" << endl;
+void Translator::print_schedule() {
+    cout << endl;
+    cout << setw(35) << left << "string"
+	 << setw(15) << left << "occs."
+	 << setw(15) << left << "savings" << endl;
     
-    for (auto const& p : schedule) {
-	cout << setw(35) << left << "'" + *p.first + "'"
-	     << setw(15) << left << p.second << endl;
+    for (string* const s : schedule) {
+	cout << setw(35) << left << "'" + *s + "'"
+	     << setw(15) << left << occurences.at(s)
+	     << setw(15) << left << lucrativity.at(s)
+	     << endl;
     }
 }
 
-void print_deps(map<string*, vector<string*>> const& deps) {
-    cout << endl << endl << setw(35) << left << "string"
+void Translator::print_translations() {
+    cout << "TRANSLATIONS" << endl;
+    for (auto const& p : translations) {
+	cout << setw(35) << left << p.first << setw(20) << left << p.second << endl;
+    }
+    cout << endl;
+}
+
+void Translator::print_deps(map<string*, vector<string*>> const& deps) {
+    cout << setw(35) << left << "string"
 	 << setw(15) << left << "deps" << endl;
 
-    for (auto const& p : deps) {
-	cout << setw(35) << left << "'" + *p.first + "'";
+    for (string* const s : schedule) {
+	if (deps.find(s) != deps.end()) { 
+	    cout << setw(35) << left << "'" + *s + "'";
 
-	cout << "[";
-	for (string* s : p.second) {
-	    cout << *s + ", ";
+	    cout << "[";
+	    for (string* s : deps.at(s)) {
+		cout << *s + ", ";
+	    }
+	    cout << "]" << endl;
 	}
-	cout << "]" << endl;
-    }
-}
-
-// in string str: replace substring "from" with substring "to"
-void replaceAll(string& str, string const& from_str, string const& to_str) {
-    if(from_str.empty())
-        return;
-    
-    auto found = str.find(from_str, 0);
-    while(found != std::string::npos) {
-        str.replace(found, found + from_str.length(), to_str);
-	
-	// in case 'to' contains 'from', like replacing 'x' with 'yx'
-        found += to_str.length();
-
-	found = str.find(from_str, found);
     }
 }
 
 ////// DECODING //////
-void Translator::decode(string const filename) {
-    string s = filename;
-    s = "";
-    cout << s << endl;
+void Translator::decode(string filename) {
+    filename = "";
 }
 // .. //
 
-////// CLASS: HASH //////
-// gets the hash
-std::string Hash::get() {
-    string s{};
-
-    for (int i : ascii_values) {
-	s += static_cast<char>(i);
-    }
-    
-    return s;
-}
-
-Hash& Hash::operator++() {
-    if (ascii_values.size() == 0) {
-	ascii_values.push_back(0);
-    }
-    else {
-	incr_pos(0);
-    }
-    
-    return *this;
-}
-
-// helper for op++();
-void Hash::incr_pos(int idx) {
-    if (ascii_values.at(idx) == 255) {
-	ascii_values.at(idx) = 0;
-	if (idx != static_cast<int>(ascii_values.size() - 1)) {
-	    incr_pos(idx+1);
-	}
-	else {
-	    ascii_values.push_back(0);
-	}
-    }
-    else {
-	ascii_values.at(idx) += 1;
-    }
-}
-
-void Hash::get_next() {
-    char c{};
-    
-    while (true) {
-	Hash::operator++();
-
-	string hashstr = Hash::get();
-	int strlen = hashstr.length();
-	string str{};
-	bool found_it = true;
-
-	fstream fs(this->filename, fstream::in);
-	while(strlen-- && fs >> noskipws >> c) {
-	    str += string(1, c);
-	}
-
-	while (true) {
-	    // if we have reached end of file
-	    if (!(fs >> noskipws >> c))
-		break;
-	    
-	    if (hashstr == str) {
-		found_it = false;
-		break;
-	    }
-	    
-	    // step string forward 
-	    str += string(1, c);
-	    
-	    str.erase(0, 1);
-	}
-
-	if (found_it) {
-	    return;
-	}
-    }
-}
-
-// .. //
 
