@@ -1,7 +1,0 @@
-#include <map>
-
-void get_candidate_words(map<string, int>& char_series, string const& filename);
-
-int expected_savings(ulong str_length, int occurances, int hash_length);
-
-void get_char_series(map<string, int>& char_series, string const& filename, int series_size);

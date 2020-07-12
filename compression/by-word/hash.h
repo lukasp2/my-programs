@@ -24,7 +24,7 @@ private:
     // strings that are not used in the text file and can be used as aliases
     std::vector<std::string> free_strings{};
     
-    std::vector<int> ascii_values{ 32 };
+    std::vector<int> ascii_values{ 0 };
 };
 
 #endif

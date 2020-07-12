@@ -20,49 +20,39 @@ using namespace std;
  */
 void Translator::encode(string const filename) {
     this->filename = filename;
-    
-    get_strings_to_translate();
 
+    cout << "finding strings to translate ... " << endl;
+    get_strings_to_translate();
+    cout << "found " << str_ptrs.size() << " candidate strings" << endl;
+    
+    cout << "finding dependencies ... " << endl;
     find_dependencies();
 
+    cout << "creating schedule ... " << endl;
     create_schedule();
 
+    cout << "creating translations ... " << endl;
     create_translations();
+    cout << "created " << translations.size() << " translations" << endl;
 
-    // free memory here
+    // free memory here?
     
+    cout << "writing to file ... " << endl;
     write_file();
 }
 
 void Translator::write_file() {
+    fstream ifs(filename, fstream::in);
+    fstream ofs("out.txt", fstream::out);
+    string line{};
+
     // for each translation in "translations", replace all occurences of p.first in file
     // with p.second
-    for (pair<string, string> const& p: translations) {
-    
-	fstream fs(filename, fstream::in);
-	char c;
-	string str;
-	
-	uint series_size = p.first.length();
-	
-	// construct string
-	while(series_size-- && fs >> noskipws >> c) {
-	    str += string(1, c);
+    while (getline(ifs, line)) {
+	for (pair<string, string> const& p: translations) {
+	    replaceAll(line, p.first, p.second);
 	}
-
-	while (true) {
-	    if (str == p.first) {
-		// replace str with p.second
-	    }
-	    
-	    // if we have reached end of file
-	    if (!(fs >> noskipws >> c))
-		break;
-	
-	    // step string forward 
-	    str += string(1, c);
-	    str.erase(0, 1);
-	}
+	ofs << line << endl;
     }
 }
 

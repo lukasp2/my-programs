@@ -114,7 +114,7 @@ void Translator::remove_obsolete_entries(string const& str, int const occs) {
 
 // get all strings we would like to translate in the file
 void Translator::get_strings_to_translate() {
-    int string_size{ 2 };
+    int string_size{ 3 };
     
     // find series of characters of size series_size
     while (true) {
@@ -163,7 +163,7 @@ void Translator::update_substrs_n_sprstrs() {
 		}
 	    }
 	}
-	
+
 	if (substr_to_str.find(s) != substr_to_str.end()) {
 	    // looping through superstrings of string s
 	    for (uint idx{}; idx < substr_to_str[s].size(); ++idx) {
@@ -175,15 +175,16 @@ void Translator::update_substrs_n_sprstrs() {
     }
 }
 
+#include <chrono>
+
 // remove str's from schedule with lucra <= 0
 void Translator::refactor_schedule() {
-    auto it = remove_if(schedule.begin(), schedule.end(),
+    // erasing all with lucra <= 0
+    schedule.erase(remove_if(schedule.begin(), schedule.end(),
 			     [&lucrativity = lucrativity] (string* const s) {
 				 return lucrativity[s] <= 0;
-			     });
-
-    schedule.erase(it, schedule.end());
-
+			     }), schedule.end());
+    
     // sorting the schedule based on lucrativeness
     sort(schedule.begin(), schedule.end(),
 	 [&lucrativity = lucrativity] (string* const s1, string* const s2) {
@@ -191,8 +192,7 @@ void Translator::refactor_schedule() {
 	 });
 }
 
-void Translator::replace_str_in_schedule(int schedule_pos, string const hash_val) {    
-    string* word = schedule[schedule_pos];
+void Translator::replace_str_in_schedule(string* word, string const hash_val) {    
     string old_word = *word;
     *word = hash_val;
     
@@ -202,14 +202,14 @@ void Translator::replace_str_in_schedule(int schedule_pos, string const hash_val
 	replaceAll(*str, old_word, hash_val);
 	
 	// 2. change lucrativity of *str
-	lucrativity[str] = expected_savings(str->length(), occurences[str], 1);
+	lucrativity[str] = expected_savings(str->length(), occurences[str], hash_val.length());
     }
     
     for (string* substr : str_to_substr[word]) {
 	occurences[substr] -= occurences[word];
 	    
 	lucrativity[substr]
-	    = expected_savings(substr->length(), occurences[substr], 1);
+	    = expected_savings(substr->length(), occurences[substr], hash_val.length());
     }
     
     // as we have now changed a lot, update substrings and superstrings
@@ -221,19 +221,23 @@ void Translator::create_translations() {
     Hash hash{ filename };
 
     refactor_schedule();
-	
+    
     // translate the strings in schedule
     for (uint idx{}; idx < schedule.size(); ++idx) {
+	cout << "finding hash ... " << endl; // takes 9 ms
+	//auto start_time = std::chrono::high_resolution_clock::now();
 	hash.get_next();
+	//auto current_time = std::chrono::high_resolution_clock::now();
+	//cout << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count() << "ms" << endl;
 	
 	translations.push_back(make_pair(*schedule[idx], hash.get()));
 
-	replace_str_in_schedule(idx, hash.get());
-
+	cout << "replaceing str in schedule ..." << endl; // takes 47 ms
+	replace_str_in_schedule(schedule[idx], hash.get());
+	
+	cout << "refactoring schedule ..." << endl; // takes 59 ms
 	refactor_schedule();
     }
-
-    print_translations();
 }
 
 // additionals: prints

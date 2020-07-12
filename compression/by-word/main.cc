@@ -5,15 +5,9 @@ using namespace std;
 int main() {
     Translator translator{};
     
-    translator.encode("file.txt");
+    translator.encode("f_50kB.txt");
 
-    cout << "ENCODED FILE" << endl;
-    translator.print_file();
-
-    translator.decode("file.txt");
-
-    cout << "DECODED FILE" << endl;
-    translator.print_file();
+    //translator.decode("f_1MB.txt");
 
     return 0;
 }
