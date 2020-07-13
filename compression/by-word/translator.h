@@ -13,9 +13,13 @@ public:
     
     void encode(std::string const filename);
 
+    void decode(std::string const filename);
+
+private:
     // helpers: encode()
     void get_strings_to_translate();
     void find_dependencies();
+    void calculate_lucrativeness();
     void create_schedule();
     void create_translations();
     void write_file();
@@ -28,10 +32,10 @@ public:
     void replace_str_in_schedule(std::string* word, std::string const hash_val);
     void update_substrs_n_sprstrs();
     void refactor_schedule();
+
+    std::string* get_next_word_from_schedule();
     // .... //
 
-    void decode(std::string const filename);
-    
     // additionals
     void print_schedule();
     void print_deps(std::map<std::string*, std::vector<std::string*>> const& deps);
@@ -50,11 +54,14 @@ private:
     std::vector<std::string*> schedule{};
 
     // variables: encode(): find_dependencies()
-    std::map<std::string*, std::vector<std::string*>> str_to_substr{};
-    std::map<std::string*, std::vector<std::string*>> substr_to_str{};
+    std::map<std::string*, std::vector<std::string*>> substrings{}; //change to list?
+    std::map<std::string*, std::vector<std::string*>> superstrings{}; // or random access
     
     // variables: encode(): create_translations()
     std::vector<std::pair<std::string, std::string>> translations{};
+
+    // additionals
+    bool verbose{ true };
 };
 
 #endif

@@ -1,0 +1,162 @@
+// returns true iif substr is a part of str but not equal to str
+bool is_substr(string const& substr, string const& str) {
+    return str.find(substr) != string::npos && substr != str;
+}
+
+// in string str: replace substring "from" with substring "to"
+void replaceAll(string& str, string const& from_str, string const& to_str) {
+    if(from_str.empty())
+        return;
+
+    auto substr_pos = str.find(from_str, 0);
+    while(substr_pos != std::string::npos) {
+        str.replace(substr_pos, from_str.length(), to_str);
+	
+	// in case 'to' contains 'from', like replacing 'x' with 'yx'
+        substr_pos += to_str.length();
+
+	substr_pos = str.find(from_str, substr_pos);
+    }
+}
+
+// returns the number of bytes saved expected by a translation to a hash
+int expected_savings(uint const str_length, int const occurances, int const hash_length) {
+    // current amount of bytes consumed by the string
+    uint without_alias = str_length * occurances;
+
+    // bytes required for the map entry if alias is used
+    uint map_entry_bytes = hash_length + str_length;
+
+    // amount of bytes consumed in the file if an alias is used
+    int alias_in_file_bytes = hash_length * occurances;
+
+    // total bytes consumed by an alias
+    int with_alias = map_entry_bytes + alias_in_file_bytes;
+        
+    return without_alias - with_alias;
+}
+
+Translator::~Translator() {
+    for (auto& p : str_ptrs)
+    	delete p.second;
+}
+
+// create a schedule which represents a queue for the translations
+void Translator::create_schedule() {
+    for (auto const& p : str_ptrs) {
+	schedule.push_back(str_ptrs[p.first]);
+    }
+}
+
+// finds dependencies among the strings
+void Translator::find_dependencies() {
+    int ctr{ 1 };
+
+    for (auto& p1 : str_ptrs) {
+	if (verbose) { cout << "finding dependencies" << setw(6) << right << ctr++ << "/" << str_ptrs.size() << "\r" << flush; }
+	
+	for (auto& p2 : str_ptrs) {
+	    if (is_substr(p1.first, p2.first)) {
+		substr_to_str[str_ptrs[p1.first]].push_back(str_ptrs[p2.first]);
+		str_to_substr[str_ptrs[p2.first]].push_back(str_ptrs[p1.first]);
+	    }
+	}
+    }
+    
+    if (verbose) { cout << endl; }
+}
+
+// fill lucrativeness map
+void Translator::calculate_lucrativeness() {
+    for (auto const& it : str_ptrs) {
+	lucrativity[it.second] = expected_savings(it.first.length(), occurences[it.second], 1);
+    }
+}
+
+// ex. say "th" has 5 occurences and is a candidate for getting an alias in the
+// encoded file, but "the" was now discovered with atleast 4 occurences. Then
+// the entry "th" is made obsolete by the entry "the".
+void Translator::remove_obsolete_entries(string const& str, int const occs) {
+    string substr{};
+    
+    substr = str.substr(0, str.length() - 1);
+    if (str_ptrs.find(substr) != str_ptrs.end()
+	&& occurences[str_ptrs[substr]] - occs < 2) {
+
+	occurences.erase(str_ptrs[substr]);
+	str_ptrs.erase(substr);
+    }
+	
+    substr = str.substr(1, str.length());
+    if (str_ptrs.find(substr) != str_ptrs.end()
+	&& occurences[str_ptrs[substr]] - occs < 2) {
+	
+	occurences.erase(str_ptrs[substr]);
+	str_ptrs.erase(substr);
+    }
+}
+
+void Translator::write_file() {
+    fstream ifs(filename, fstream::in);
+    fstream ofs("out.txt", fstream::out);
+    string line{};
+
+    // for each translation in "translations", replace all occurences of p.first in file
+    // with p.second
+    while (getline(ifs, line)) {
+	for (pair<string, string> const& p: translations) {
+	    replaceAll(line, p.first, p.second);
+	}
+	ofs << line << endl;
+    }
+
+    if (verbose) { cout << "done." << endl; }
+}
+
+// additionals: prints
+void Translator::print_file() {
+    std::ifstream f(filename);
+
+    if (f.is_open())
+        std::cout << f.rdbuf();
+}
+
+
+void Translator::print_schedule() {
+    cout << endl;
+    cout << setw(35) << left << "string"
+	 << setw(15) << left << "occs."
+	 << setw(15) << left << "savings" << endl;
+    
+    for (string* const s : schedule) {
+	cout << setw(35) << left << "'" + *s + "'"
+	     << setw(15) << left << occurences.at(s)
+	     << setw(15) << left << lucrativity.at(s)
+	     << endl;
+    }
+}
+
+void Translator::print_translations() {
+    cout << "TRANSLATIONS" << endl;
+    for (auto const& p : translations) {
+	cout << setw(35) << left << "'" + p.first + "'" << p.second << endl;
+    }
+    cout << endl;
+}
+
+void Translator::print_deps(map<string*, vector<string*>> const& deps) {
+    cout << setw(35) << left << "string"
+	 << setw(15) << left << "deps" << endl;
+
+    for (string* const s : schedule) {
+	if (deps.find(s) != deps.end()) { 
+	    cout << setw(35) << left << "'" + *s + "'";
+
+	    cout << "[";
+	    for (string* s : deps.at(s)) {
+		cout << *s + ", ";
+	    }
+	    cout << "]" << endl;
+	}
+    }
+}
