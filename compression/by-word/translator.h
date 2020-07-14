@@ -29,11 +29,8 @@ private:
     void remove_obsolete_entries(std::string const& str, int const occurences);
 
     // helpers: encode(): create_translations()
-    void replace_str_in_schedule(std::string* word, std::string const hash_val);
-    void update_substrs_n_sprstrs();
-    void refactor_schedule();
-
     std::string* get_next_word_from_schedule();
+    void replace_str_in_schedule(std::string* word, std::string const hash_val);
     // .... //
 
     // additionals

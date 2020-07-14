@@ -1,5 +1,6 @@
 #include "finished.cc"
 
+// only fetch strings that is a substr of strs we already have
 void Translator::get_all_strings(map<string, int>& strings, int series_size) {
     fstream fs(filename, fstream::in);
     char c;

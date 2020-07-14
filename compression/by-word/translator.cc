@@ -22,9 +22,9 @@ void Translator::encode(string const filename) {
 
     calculate_lucrativeness();
     
-    find_dependencies();
-
     create_schedule();
+
+    find_dependencies();
 
     create_translations();
 

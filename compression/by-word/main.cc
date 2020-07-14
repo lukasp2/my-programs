@@ -5,7 +5,7 @@ using namespace std;
 int main() {
     Translator translator{};
     
-    translator.encode("f_50kB.txt");
+    translator.encode("f_1MB.txt");
 
     //translator.decode("f_1MB.txt");
 
