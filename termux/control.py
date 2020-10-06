@@ -12,10 +12,6 @@ target_display=":1" # check with $who ?
 
 source resources.sh
 
-display_links() {
-    #employ python script with bea soup
-}
-
 ssh ${target_usr}@${target_ip}
 firefox-esr --display=${target_display}
 
@@ -32,7 +28,7 @@ while [ 1 ]; do
         "nf")       
 	    link="www.nyafilmer.wtf"
 	    firefox-esr -new-tab=${link}
-	    display_links ${link}
+	    ./get_links.py ${link}
             ;;
         *)              
     esac 
