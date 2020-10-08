@@ -1,57 +1,64 @@
 #!/usr/bin/env python3
 
 import os
+
 import colors
+import helpers
 
 links = [("youtube", "https://www.youtube.com/"),
          ("nyafilmer", "https://nyafilmer.vip/")]
 
-def system_menu():
-    print(colors.Green + "### Welcome to the System Menu ###" + colors.NC)
-    print("0. exit")
-    print("1. volume control")
-    print("2. access browser")
-    print("3. system reboot")
-    print("4. system shutdown")
-    print("")
-    ## full screen, start, pause, next episode, ...
+def state_control(state):
+    while state != 0:
+        if state == 1:
+            state = main_menu()
+        elif state == 2:
+            state = system_menu()
+        elif state == 3:
+            state = browser_menu()
     
-    while True:
-        option = int(input())
-        if option == 0:
-            print("Exiting ssh session")
-            os.system("exit")
-            exit()
-        elif option == 1:
-            # implement system volume control
-            pass
-        elif option == 2:
-            browser_menu()
-        elif option == 3:
-            print("rebooting system ...")
-            os.system("sudo reboot")
-        elif option == 3:
-            print("shutting down system ...")
-            os.system("sudo shutdown now")
-        else:
-            print("invalid option, try again ...")
+def main_menu():
+    prompt = ["### Welcome to the Main Menu ###", \
+              "exit ssh", \
+              "system control", \
+              "access browser"]
+    helpers.print_prompt(prompt)
+    state = helpers.get_input(len(prompt) - 1)
+    
+    return state
+    
+def system_menu():
+    prompt = ["## Welcome to the System Menu ##", \
+              "back to main menu", \
+              "volume control", \
+              "system reboot", \
+              "system shutdown"]
+    helpers.print_prompt(prompt)
+    option = helpers.get_input(len(prompt) - 1)
+    
+    if option == 1:
+        # implement system volume control
+        pass
+    elif option == 2:
+        print("rebooting system ...")
+        os.system("sudo reboot")
+    elif option == 3:
+        print("shutting system down ...")
+        os.system("sudo shutdown now")
+        
+    # return to main_menu state
+    return 1
       
 def browser_menu():
-      print(colors.Green + "## Welcome to the Browser Menu ##" + colors.NC)
-      print("0. go back")
-      for i in range(len(links)):
-            print(str(i + 1) + ". " + links[i][0])
-      print("")
-      
-      while True:
-            option = int(input())
-            if option == 0:
-                system_menu()
-            elif 1 <= option <= len(links):
-                visit_page(links[option - 1][1])
-            else:
-                print("invalid option, try again ...")
-                
+    prompt = ["## Welcome to the Browser Menu ##", \
+              "back to main menu"]
+    prompt += [website for website, link in links]
+    helpers.print_prompt(prompt)
+    option = helpers.get_input(len(prompt) - 1)
+              
+    #visit_page(links[option - 1][1])
+    return 1
+    
 def nya_filmer():
     # implement browser calls for volume control, full screen, mute, next episode / season
     pass
