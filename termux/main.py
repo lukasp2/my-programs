@@ -12,7 +12,8 @@ target_display = ':1' # check with $who ?
 #os.system("ssh " + target_usr + "@" + target_ip)
 
 # start: set state to main menu
-functions.state_control(1)
+#functions.state_control(1)
+menus.main_menu()
 
 print("Exiting ssh session")
 os.system("exit")
