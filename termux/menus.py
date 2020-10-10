@@ -13,16 +13,17 @@ class Menu:
         print(colors.Green + self.header + colors.NC)
         for i in range(len(self.options)):
             print(str(i) + ". " + self.options[i])
-        print()
 
     def get_menu_input(self):
-        print("Enter option ...")
+        print(">>> ", end='')
         opt = int(input())
     
         while opt < 0 or opt >= len(self.options):
             print("Invalid input, try again ...")
+            print(">>> ", end='')
             opt = int(input())
-        
+
+        print()
         return opt
 
     # abstract class, force override:     
@@ -38,6 +39,7 @@ class Menu:
                 break
             
             m = self.handle_input(option)
+            # id type(self) == type(m) then ???
             m.run()
             
 class Pick_SSH(Menu):
@@ -92,7 +94,8 @@ class System_Menu(Menu):
         options = ["back to main menu", \
                   "volume control", \
                   "system reboot", \
-                  "system shutdown"]
+                   "system shutdown", \
+                   "system info"]
         Menu.__init__(self, header, options)
 
     def handle_input(self, option):
@@ -106,9 +109,15 @@ class System_Menu(Menu):
         elif option == 3:
             print("shutting system down ...")
             os.system("sudo shutdown now")
+        elif option == 4:
+            print("System info")
+            x = os.uname()
+            print(*x, sep='\n')
+            input("Press any key to continue ...")
         else:
             print("An error occured ...")
-            return self
+            
+        return self
 
 class Browser_Menu(Menu):
     # TODO: get tty/target display from $who
@@ -136,4 +145,8 @@ class Browser_Menu(Menu):
         else:
             print("An error occured ...")
             return Main_Menu()
+
+# class Webpage_Viewer(Menu):
+# > class YouTube(Webpage_Viewer):
+
 
