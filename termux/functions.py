@@ -10,6 +10,10 @@ def visit_page(url):
       print(" listing page links ..")
       links = get_links(url)
 
+      # in either Browser or Youtube:
+      # .init()_:
+      # self.options = get_links(url)
+      
       for i in range(len(links)):
             print(i + 1, links[i])
 

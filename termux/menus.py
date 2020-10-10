@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
 import os
+import socket
 import colors
 
 class Menu:
     def __init__(self, header, options):
         self.header = header
-        self.option = options
+        self.options = options
     
     def print_menu_prompt(self):
-        colors.Green + self.header + colors.NC
+        print(colors.Green + self.header + colors.NC)
         for i in range(len(self.options)):
-            print(str(i) + "." + self.options[i])
+            print(str(i) + ". " + self.options[i])
         print()
 
     def get_menu_input(self):
@@ -24,39 +25,67 @@ class Menu:
         
         return opt
 
-    # abstract class, force override:
-    def handle_input():
+    # abstract class, force override:     
+    def handle_input(self, option):
         pass
 
     def run(self):
-        # main loop here?
+        while True:
+            self.print_menu_prompt()
+            option = self.get_menu_input()
+
+            if option == 0:
+                break
+            
+            m = self.handle_input(option)
+            m.run()
+            
+class Pick_SSH(Menu):
+    def __init__(self):
+        header = "## Welcome to the Pick SSH Menu ##"
+        options = ["exit"]
+        self.lookup_nw_hosts()
+        for host in self.hosts:
+            options.append(host['hostname'] + " " + host['ip'])
+            
+        super().__init__(header, options)
         
-        self.print_menu_prompt()
-        option = self.get_menu_input()
-        handle_input(option)
-
-        return new_menu
-
+    def lookup_nw_hosts(self):
+        local_ip = socket.gethostbyname(socket.gethostname())
+        x = os.popen("ip add").read()
+        x = x[x.find(local_ip):]
+        netmask = x[x.find("/") : x.find("/") + 3]
+        nmap_output = os.popen("nmap -sn " + local_ip + netmask).read().split('\n')
+        
+        self.hosts = []
+        for row in nmap_output:
+            if row[:20] == "Nmap scan report for":
+                s = row[21:].split()
+                hostname = s[0]
+                ip = s[1][1:-1]
+                self.hosts.append({'hostname' : hostname, 'ip' : ip})
+        
+    def handle_input(self, option):
+        os.popen("ssh " + self.hosts[option - 1]['hostname'] + "@" + self.hosts[option - 1]['ip'])
+        
 class Main_Menu(Menu):
     def __init__(self):
-        header = "## Welcome to the System Menu ##"
-        options = ["exit ssh", \
+        header = "## Welcome to the Main Menu ##"
+        options = ["exit", \
                    "system control", \
                    "access browser"]
 
         Menu.__init__(self, header, options)
 
-    def handle_input(option):
-        if option == 0:
-            return
-        elif option == 1:
+    def handle_input(self, option):
+        if option == 1:
             return System_Menu()
         elif option == 2:
             return Browser_Menu()
         else:
             print("An error occured ...")
             return self
-        
+
 class System_Menu(Menu):
     def __init__(self):
         header = "## Welcome to the System Menu ##"
@@ -67,9 +96,7 @@ class System_Menu(Menu):
         Menu.__init__(self, header, options)
 
     def handle_input(self, option):
-        if option == 0:
-            return Main_Menu()
-        elif option == 1:
+        if option == 1:
             # implement system volume control
             # return Volume_Menu() ??
             pass
@@ -81,38 +108,32 @@ class System_Menu(Menu):
             os.system("sudo shutdown now")
         else:
             print("An error occured ...")
-            
-        return self
+            return self
 
 class Browser_Menu(Menu):
+    # TODO: get tty/target display from $who
+    
     def __init__(self):
         header = "## Welcome to the Browser Menu ##"
-        options = ["back to main menu"]
         self.links = [("youtube", "https://www.youtube.com/"),
                       ("nyafilmer", "https://nyafilmer.vip/")]
-        Menu.__init__(self, header, options)
 
-    def print_menu_prompt(self):
-        colors.Green + self.header + colors.NC
-        for i in range(len(self.options)):
-            print(str(i) + "." + self.options[i])
-
-        for i in range(len(self.options), len(self.links)):
-            print(str(i) + "." + self.links[i][0])
-        print()
+        options = ["back to main menu"]
+        for link in self.links:
+            options.append(link[0])
+        
+        super().__init__(header, options)
 
     def handle_input(self, option):
-        if option == 0:
-            return Main_Menu()
-        elif option == 1:
-            print("going to youtube or whatev ...")
+        if option == 1:
+            print("going to youtube ...")
             #return Browser_Youtube() ??
-            #firefox-esr ....
+            #or: firefox-esr ....
+        elif option == 2:
+            print("going to nyafilmer ...")
+            #return Browser_NyaFilmer() ??
+            #or: firefox-esr ....
         else:
             print("An error occured ...")
-
-        return self
-        
-m = Main_Menu()
-m.run()
+            return Main_Menu()
 
