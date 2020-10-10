@@ -38,13 +38,11 @@ class Menu:
             if option == 0:
                 break
             
-            m = self.handle_input(option)
-            # id type(self) == type(m) then ???
-            m.run()
+            self.handle_input(option)
             
 class Pick_SSH(Menu):
     def __init__(self):
-        header = "## Welcome to the Pick SSH Menu ##"
+        header = "## Pick SSH Menu ##"
         options = ["exit"]
         self.lookup_nw_hosts()
         for host in self.hosts:
@@ -72,7 +70,7 @@ class Pick_SSH(Menu):
         
 class Main_Menu(Menu):
     def __init__(self):
-        header = "## Welcome to the Main Menu ##"
+        header = "## Main Menu ##"
         options = ["exit", \
                    "system control", \
                    "access browser"]
@@ -81,16 +79,17 @@ class Main_Menu(Menu):
 
     def handle_input(self, option):
         if option == 1:
-            return System_Menu()
+            m = System_Menu()
+            m.run()
         elif option == 2:
-            return Browser_Menu()
+            m = Browser_Menu()
+            m.run()
         else:
             print("An error occured ...")
-            return self
 
 class System_Menu(Menu):
     def __init__(self):
-        header = "## Welcome to the System Menu ##"
+        header = "## System Menu ##"
         options = ["back to main menu", \
                   "volume control", \
                   "system reboot", \
@@ -114,16 +113,15 @@ class System_Menu(Menu):
             x = os.uname()
             print(*x, sep='\n')
             input("Press any key to continue ...")
+            print()
         else:
             print("An error occured ...")
-            
-        return self
 
 class Browser_Menu(Menu):
     # TODO: get tty/target display from $who
     
     def __init__(self):
-        header = "## Welcome to the Browser Menu ##"
+        header = "## Browser Menu ##"
         self.links = [("youtube", "https://www.youtube.com/"),
                       ("nyafilmer", "https://nyafilmer.vip/")]
 
@@ -144,7 +142,6 @@ class Browser_Menu(Menu):
             #or: firefox-esr ....
         else:
             print("An error occured ...")
-            return Main_Menu()
 
 # class Webpage_Viewer(Menu):
 # > class YouTube(Webpage_Viewer):
