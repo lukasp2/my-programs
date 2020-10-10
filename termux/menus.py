@@ -141,34 +141,46 @@ class Browser_Menu(Menu):
         else:
             print("An error occured ...")
 
-class Webpage_Viewer(Menu):
-    def __init__(self, header, options):
-        super().__init__(header, options)
-
+class Webpage_Viewer():
+    def __init__(self, webpage):
+        self.webpage = webpage
+        
     def get_links(self, url):
         html_content = requests.get(url).text
         soup = BeautifulSoup(html_content, 'lxml')
-        ret = [ link.get('href') for link in soup.find_all('a') ]
-        return ret
+        hyperlinks = [ link.get('href') for link in soup.find_all('a') ]
+        hyperlinks = self.parse_links(hyperlinks)
+        return hyperlinks
 
-class YouTube(Webpage_Viewer):
+    def make_valid_link(self, link):
+        if link.find(links[self.webpage]) == -1:
+            link = links[self.webpage] + link
+        return link
+    
+    def parse_links(self, hyperlinks):
+        hyperlinks = sorted(list(set(filter(None, hyperlinks))))
+        hyperlinks = [ self.make_valid_link(link) for link in hyperlinks ]
+        return hyperlinks
+    
+class YouTube(Menu):
     def __init__(self):
         header = "## YouTube ##"
+        self.webpage_viewer = Webpage_Viewer('youtube')
         self.options = ["back to Browser Menu"]
-        self.options += self.get_links(links['youtube'])
+        self.options += self.webpage_viewer.get_links(links['youtube'])
         super().__init__(header, self.options)
-    
+
     def handle_input(self, option):        
         os.popen("firefox-esr --display=:1 " + options[option - 1])
 
-class NyaFilmer(Webpage_Viewer):
+class NyaFilmer(Menu):
     def __init__(self):
         header = "## NyaFilmer ##"
+        self.webpage_viewer = Webpage_Viewer('nyafilmer')
         self.options = ["back to Browser Menu"]
-        self.options += self.get_links(links['nyafilmer'])
+        self.options += self.webpage_viewer.get_links(links['nyafilmer'])
         super().__init__(header, self.options)
     
-    def handle_input(self, option):        
-        os.popen("firefox-esr --display=:1 " + options[option - 1])
-
+    def handle_input(self, option):
+        os.popen("firefox-esr --display=:1 " + self.options[option - 1])
 
