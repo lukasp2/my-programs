@@ -2,6 +2,9 @@
 
 import os
 import socket
+import requests
+from bs4 import BeautifulSoup
+
 import colors
 
 class Menu:
@@ -26,7 +29,7 @@ class Menu:
         print()
         return opt
 
-    # abstract class, force override:     
+    # abstract class, force override:
     def handle_input(self, option):
         pass
 
@@ -117,33 +120,55 @@ class System_Menu(Menu):
         else:
             print("An error occured ...")
 
-class Browser_Menu(Menu):
-    # TODO: get tty/target display from $who
-    
+links = {"youtube" : "https://www.youtube.com/",
+         "nyafilmer" : "https://nyafilmer.vip/"}
+
+class Browser_Menu(Menu):    
     def __init__(self):
         header = "## Browser Menu ##"
-        self.links = [("youtube", "https://www.youtube.com/"),
-                      ("nyafilmer", "https://nyafilmer.vip/")]
-
-        options = ["back to main menu"]
-        for link in self.links:
-            options.append(link[0])
+        options = ["back to Main Menu"]
+        options += links.keys()
         
         super().__init__(header, options)
 
     def handle_input(self, option):
         if option == 1:
-            print("going to youtube ...")
-            #return Browser_Youtube() ??
-            #or: firefox-esr ....
+            m = YouTube()
+            m.run()
         elif option == 2:
-            print("going to nyafilmer ...")
-            #return Browser_NyaFilmer() ??
-            #or: firefox-esr ....
+            m = NyaFilmer()
+            m.run()
         else:
             print("An error occured ...")
 
-# class Webpage_Viewer(Menu):
-# > class YouTube(Webpage_Viewer):
+class Webpage_Viewer(Menu):
+    def __init__(self, header, options):
+        super().__init__(header, options)
+
+    def get_links(self, url):
+        html_content = requests.get(url).text
+        soup = BeautifulSoup(html_content, 'lxml')
+        ret = [ link.get('href') for link in soup.find_all('a') ]
+        return ret
+
+class YouTube(Webpage_Viewer):
+    def __init__(self):
+        header = "## YouTube ##"
+        self.options = ["back to Browser Menu"]
+        self.options += self.get_links(links['youtube'])
+        super().__init__(header, self.options)
+    
+    def handle_input(self, option):        
+        os.popen("firefox-esr --display=:1 " + options[option - 1])
+
+class NyaFilmer(Webpage_Viewer):
+    def __init__(self):
+        header = "## NyaFilmer ##"
+        self.options = ["back to Browser Menu"]
+        self.options += self.get_links(links['nyafilmer'])
+        super().__init__(header, self.options)
+    
+    def handle_input(self, option):        
+        os.popen("firefox-esr --display=:1 " + options[option - 1])
 
 

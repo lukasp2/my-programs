@@ -33,17 +33,10 @@ def get_links(url):
       import requests
       from bs4 import BeautifulSoup
 
-      r = requests.get(url)
-      html_content = r.text
+      html_content = requests.get(url).text
       soup = BeautifulSoup(html_content, 'lxml')
-
-      links = soup.find_all('a')
-
-      ret = []
-      for link in links:
-            url = link.get('href')
-            ret.append(url)
-            
+      ret = [ link.get('href') for link in soup.find_all('a') ]
+                  
       return ret
 
 
