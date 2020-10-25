@@ -54,16 +54,15 @@ void Translator::calculate_lucrativeness() {
 	lucrativity[it.second] = expected_savings(it.first.length(), occurences[it.second], 1);
     }
 }
-
+/*
 // ex. say "th" has 5 occurences and is a candidate for getting an alias in the
 // encoded file, but "the" was now discovered with atleast 4 occurences. Then
 // the entry "th" is made obsolete by the entry "the".
-void Translator::remove_obsolete_entries(string const& str, int const occs) {
-    string substr{};
+void Translator::remove_obsolete_entries(string const& str) {
     
-    substr = str.substr(0, str.length() - 1);
+    string substr = str.substr(0, str.length() - 1);
     if (str_ptrs.find(substr) != str_ptrs.end()
-	&& occurences[str_ptrs[substr]] - occs < 2) {
+	&& occurences[str_ptrs[substr]] - occurences[str_ptrs[str]] < 2) {
 
 	occurences.erase(str_ptrs[substr]);
 	str_ptrs.erase(substr);
@@ -71,13 +70,13 @@ void Translator::remove_obsolete_entries(string const& str, int const occs) {
 	
     substr = str.substr(1, str.length());
     if (str_ptrs.find(substr) != str_ptrs.end()
-	&& occurences[str_ptrs[substr]] - occs < 2) {
+	&& occurences[str_ptrs[substr]] - occurences[str_ptrs[str]] < 2) {
 	
 	occurences.erase(str_ptrs[substr]);
 	str_ptrs.erase(substr);
     }
 }
-
+*/
 void Translator::write_file() {
     fstream ifs(filename, fstream::in);
     fstream ofs("out.txt", fstream::out);

@@ -1,5 +1,82 @@
 #include "finished.cc"
 
+// checks if str is worthy of getting translated
+bool Translator::worthy_candidate(string const& str) {
+    string substr = str.substr(0, str.length() - 1);
+    if (str_ptrs.find(substr) != str_ptrs.end()) {
+	//&& occurences[str_ptrs[substr]] - occurences[str_ptrs[str]] >= 2) {
+	return true;
+    }
+    
+    substr = str.substr(1, str.length());
+    if (str_ptrs.find(substr) != str_ptrs.end()) {
+	//&& occurences[str_ptrs[substr]] - occurences[str_ptrs[str]] >= 2) {
+	return true;
+    }
+
+    return false;
+}
+
+bool Translator::find_strings(int str_size, bool first_it) {
+    fstream fs(filename, fstream::in);
+    char c{};
+    string str{};
+    bool found{ false };
+    
+    // construct string
+    while(str_size-- && fs >> noskipws >> c) {
+	str += string(1, c);
+    }
+
+    while (true) {
+	if (str_ptrs.find(str) != str_ptrs.end()) {
+	    occurences[str_ptrs[str]]++;
+	}
+	else if (worthy_candidate(str) || first_it) {
+	    if (verbose) { cout << str_ptrs.size() << " candidate strings found  \r" << flush; }
+	    str_ptrs[str] = new string{ str };
+            // add dependencies?
+	    occurences[str_ptrs[str]] = 1;
+	    found = true;
+	}
+
+        // if we have reached end of file
+	if (!(fs >> noskipws >> c))
+	    break;
+	
+	// step string forward 
+	str += std::string(1, c);
+	str.erase(0, 1);
+    }
+
+    // with occs in concideration, should we delete the substrings from str_ptrs?
+    // store in vector, sort vector by alphanum, delete unworthy substrings.
+
+    return found;
+}
+
+void Translator::get_strings_to_translate() {
+    int string_size{ 2 };
+    bool first_it{ true };
+    
+    // find series of characters of size string_size
+    while (true) {
+	bool found = find_strings(string_size, first_it);
+
+	// if no new strings to translate were found
+	if (!found)
+	    break;
+	
+	first_it = false;
+	
+	++string_size;
+    }
+    
+    if (verbose) { cout << endl; }
+}
+
+/*
+// only fetch strings that is a substr of strs we already have
 void Translator::get_all_strings(map<string, int>& strings, int series_size) {
     fstream fs(filename, fstream::in);
     char c;
@@ -65,6 +142,7 @@ void Translator::get_strings_to_translate() {
 
     if (verbose) { cout << endl; }
 }
+*/
 
 string* Translator::get_next_word_from_schedule() {
     auto max_lucra{ schedule.begin() };

@@ -17,6 +17,7 @@ public:
 
 private:
     // helpers: encode()
+    //void get_strings_to_translate2();
     void get_strings_to_translate();
     void find_dependencies();
     void calculate_lucrativeness();
@@ -25,9 +26,11 @@ private:
     void write_file();
     
     // helpers: encode(): get_strings_to_translate()
-    void get_all_strings(std::map<std::string, int>& strings, int series_size);
-    void remove_obsolete_entries(std::string const& str, int const occurences);
-
+    //void get_all_strings(std::map<std::string, int>& strings, int series_size);
+    bool find_strings(int series_size, bool first_it);
+    //void remove_obsolete_entries(std::string const& str);
+    bool worthy_candidate(std::string const& str);
+    
     // helpers: encode(): create_translations()
     std::string* get_next_word_from_schedule();
     void replace_str_in_schedule(std::string* word, std::string const hash_val);
