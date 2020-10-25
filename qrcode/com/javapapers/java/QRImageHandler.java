@@ -30,7 +30,7 @@ public class QRImageHandler {
     public BufferedImage getImage(String filepath) throws IOException {
         BufferedImage image = ImageIO.read(new FileInputStream(filepath));
         image = cutImage(image);
-        image = addPadding(image);
+        image = addPadding(image, 85);
         image = scaleImage(image, 1000);
 
         for (int i = 0; i < rotation; ++i) { image = rotateImage90CW(image); }
@@ -38,7 +38,7 @@ public class QRImageHandler {
         return image;
     }
 
-    public ArrayList<Byte> getQRBytes(BufferedImage image) throws NotFoundException {
+    public ArrayList<Byte> getQRBytes(BufferedImage image) {
         Hashtable<DecodeHintType, Object> decodeHints = new Hashtable<>();
         decodeHints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
         decodeHints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.of(BarcodeFormat.AZTEC));
@@ -48,11 +48,15 @@ public class QRImageHandler {
         binaryBitmap.rotateCounterClockwise();
         binaryBitmap.rotateCounterClockwise();
 
-        Result result = new MultiFormatReader().decode(binaryBitmap, decodeHints);
-
         ArrayList<Byte> QRByteArrdata = new ArrayList<>();
-        for (byte b :  result.getRawBytes())
-            QRByteArrdata.add(b);
+
+        try {
+            Result result = new MultiFormatReader().decode(binaryBitmap, decodeHints);
+
+            for (byte b :  result.getRawBytes())
+                QRByteArrdata.add(b);
+
+        } catch(NotFoundException e) { e.printStackTrace(); }
 
         return QRByteArrdata;
     }
@@ -77,9 +81,7 @@ public class QRImageHandler {
     }
 
     // returns a the input image with a 50px white padding
-    public BufferedImage addPadding(BufferedImage image) {
-        int padding = 80;
-
+    private BufferedImage addPadding(BufferedImage image, int padding) {
         BufferedImage paddingImage = new BufferedImage(image.getWidth() + padding * 2,image.getHeight() + padding * 2, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = paddingImage.createGraphics();
         graphics.setPaint(new Color( 255, 255, 255 ));
@@ -87,6 +89,9 @@ public class QRImageHandler {
         graphics.drawImage(image,padding,padding,null);
 
         return paddingImage;
+    }
+
+    public void printImageInfo(BufferedImage image) {
     }
 
     public void displayImage(BufferedImage image) {

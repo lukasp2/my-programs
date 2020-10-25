@@ -1,3 +1,5 @@
 *~
 nodeJS/
 __pycache__/
+*.class
+.idea

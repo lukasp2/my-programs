@@ -15,15 +15,18 @@ public class Main {
 		//ArrayList<String> filenames = qrImageHandler.getFilesInDir("QRscreenshots/nkpg-rim/");
 		//qrImageHandler.setQRPosAndSize(0,0,200,200, 0);
 
-		qrImageHandler.setQRPosAndSize(130,414,378,378, 2);
+		qrImageHandler.setQRPosAndSize(130,414,378,378, 0);
 		ArrayList<String> filenames = qrImageHandler.getFilesInDir("QRscreenshots/rim-nkpg/");
 
 		ArrayList<ArrayList<Byte>> QRBytes = new ArrayList<>();
+
 		for (String filename : filenames) {
 			System.out.println(filename);
 			BufferedImage image = qrImageHandler.getImage(filename);
-			qrImageHandler.displayImage(image);
-			QRBytes.add(qrImageHandler.getQRBytes(image));
+			qrImageHandler.printImageInfo(image);
+
+			ArrayList<Byte> imageBytes = qrImageHandler.getQRBytes(image);
+			if (!imageBytes.isEmpty()) { QRBytes.add(imageBytes); }
 		}
 
 		for (int i = 0; i < QRBytes.size(); ++i) {
@@ -43,7 +46,7 @@ public class Main {
 		for (int i = 0; i < matchingBytesInBlocks.size(); ++i) {
 			System.out.println(matchingBytesInBlocks.get(i));
 		}
-    }
+	}
 
 	// for two arrays a1 = [1,2,3,-1,-1,4,5,6,-1,7,8,9]
 	//                a2 = [1,2,3,-2,-2,4,5,6,-2,-2,-2,7,8,9]
