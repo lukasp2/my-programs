@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# finder: finds a module and lists its inheritances
+# usage: ./finder [module name]
+
 source ../colors.sh
 
 LOC=$(pwd); cd /
