@@ -6,12 +6,31 @@
 #1. finder
 #2. finder res.partner
 
-echo -e "LOOKING IN:\t\t$ODOODIR"
-echo -e "SEARCHING FOR:\t\t$SEARCH"
-echo -e "SEARCH_QUERY:\t\t$SEARCH_QUERY"
-echo -e "RUNNING COMMAND:\tgrep -Rs inherit.\?=.\?\(\\\"\|'\)$1\(\\\"\|'\) $ODOODIR --include=*py"
+source ../colors.sh
 
-grep -Rs "inherit.\?=.\?\(\\\"\|'\)$1\(\\\"\|'\)" . --include=*py
+ODOODIR="/usr/share"
+SEARCH="$1"
 
+if (( $# != 1 )); then
+    echo "usage: finder [OPTIONS] [class name] ..."
+    # options:
+    #   -f: (DEFAULT) find class (eg. res.partner)
+    #   -c: list children to class (all that inherits res.partner)
+    #   LATER: -p: list parent to class ()
+    exit
+fi
+
+echo -e "LOOKING IN\t\t$ODOODIR"
+echo -e "SEARCHING FOR\t\t$SEARCH"
+echo -e "RUNNING COMMAND\t\tgrep -Rns inherit.\?=.\?\(\\\"\|'\)$1\(\\\"\|'\) $ODOODIR --include=*py"
+
+# -fc:
+echo -e "\n${Yellow}ORIGIN${NC}"
+grep -Rns "_name.\?=.\?\(\\\"\|'\)$SEARCH\(\\\"\|'\)" /usr/share --include=*py
+echo -e "\n${Yellow}INHERITANCES${NC}"
+grep -Rns "_inherit.\?=.\?\(\\\"\|'\)$SEARCH\(\\\"\|'\)" /usr/share --include=*py
+
+# -c:
+#grep -Rs "_inherit.\?=.\?\(\\\"\|'\)$1\(\\\"\|'\)" . --include=*py
 
 
