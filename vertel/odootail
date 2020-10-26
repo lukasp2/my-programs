@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# odootail with colored output
+
+sudo tail -f /var/log/odoo/odoo-server.log | awk '
+  /ERROR/ {print "\033[0;33m" $0 "\033[0m"}
+  /WARNING/ {print "\033[0;33m" $0 "\033[0m"}
+'
+
+
