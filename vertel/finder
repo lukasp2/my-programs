@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source ../colors.sh
+
+LOC=$(pwd); cd /
+ODOODIR="/home/lukas"
+SEARCH="$1"
+
+if (( $# != 1 )); then
+    echo "usage: ./finder [OPTIONS] [module name] ..."
+    exit
+fi
+
+echo -e "SEARCHING FOR\t\t$SEARCH"
+echo -e "IN DIRECTORY\t\t$ODOODIR"
+#echo -e "RUNNING\t\t\tgrep -Rns inherit.\?=.\?\(\\\"\|'\)$SEARCH\(\\\"\|'\) $ODOODIR --include=*py"
+
+echo -e "\n${Yellow}ORIGIN${NC}"
+grep -Rns "_name.\?=.\?\(\\\"\|'\)$SEARCH\(\\\"\|'\)" $ODOODIR --include=*py
+echo -e "\n${Yellow}INHERITANCES${NC}"
+grep -Rns "_inherit.\?=.\?\(\\\"\|'\)$SEARCH\(\\\"\|'\)" $ODOODIR --include=*py
+
+cd $LOC
+
+
