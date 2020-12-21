@@ -4,8 +4,11 @@ import requests
 import time
 import os
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 class Station:
     def __init__(self, name, URL_id):
         self.name = name
@@ -21,12 +24,13 @@ class Route:
 
 class Timetable:
     class TimeEntry:
-        def __init__(self, orig_deparr, new_deparr, travel_time, travel_plan, switches):
+        def __init__(self, orig_deparr, new_deparr, travel_time, travel_plan, switches, deviated_time):
             self.orig_deparr = orig_deparr
             self.new_deparr = new_deparr
             self.travel_time = travel_time
             self.travel_plan = travel_plan
             self.switches = switches
+            self.deviated_time = deviated_time
             
     def __init__(self, scraper, route):
         self.route = route
@@ -34,30 +38,43 @@ class Timetable:
         raw_timetable = scraper.scrape(route)
         
         for journey in raw_timetable:
-            t = self.TimeEntry(journey['orig_deparr'], journey['new_deparr'], journey['travel_time'], journey['travel_plan'], journey['switches'])
+            t = self.TimeEntry(journey['orig_deparr'],
+                               journey['new_deparr'],
+                               journey['travel_time'],
+                               journey['travel_plan'],
+                               journey['switches'],
+                               journey['deviated_time'])
             self.timetable.append(t)
 
     def print_timetable(self):
         if self.timetable:
-            print("Timetable for route " + self.route.stringify_route())
             for journey in self.timetable:
-                print(' -> '.join(journey.new_deparr), journey.travel_time, journey.travel_plan, journey.switches)
+                print(' -> '.join(journey.new_deparr), journey.travel_time, journey.travel_plan, journey.switches, '*' if journey.deviated_time else '')
             print()
         else:
             return "No timetable was found for route " + self.route.stringify_route()
     
 class SeleniumScraper:
+
+    def retFalse(self):
+        return False
+
+    def destroy(self):
+        self.driver.close()
+    
     def __init__(self):
         options = Options()
         options.headless = True
 
         DRIVER_PATH = "/home/lukas/Downloads/chromedriver"
         self.driver = webdriver.Chrome(options=options, executable_path=DRIVER_PATH)
+        self.driver.implicitly_wait(5)
 
     def scrape(self, route):
         URL = "https://www.ostgotatrafiken.se/"
         URL += route.from_station.URL_id + "/" + route.to_station.URL_id
         self.driver.get(URL)
+        time.sleep(3)
 
         xpath_expr = "//div[@class='departure__item accordion_list__item clearfix expandable main']"
         html_table = self.driver.find_elements_by_xpath(xpath_expr)
@@ -65,7 +82,7 @@ class SeleniumScraper:
         timetable = []
         for table_entry in html_table:
             l = table_entry.text.split("\n")
-            
+
             if len(l) < 4:
                 continue
 
@@ -87,11 +104,10 @@ class SeleniumScraper:
                               'orig_deparr' : [ dep_time, arr_time ],
                               'new_deparr' : [ new_dep_time, new_arr_time ],
                               'switches' : switches,
+                              'deviated_time' : deviated_time
             })
 
-        #self.driver.close()
         return timetable
-
 
 def main():
     stations = [
@@ -108,8 +124,10 @@ def main():
 
     scraper = SeleniumScraper()
     for route in routes_to_track:
+        print("Timetable for route " + route.stringify_route())
         timetable = Timetable(scraper, route)
         timetable.print_timetable()
+    scraper.destroy
         
 main()    
 
