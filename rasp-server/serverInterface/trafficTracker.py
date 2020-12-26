@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
-
 import requests
 import time
 import os
-#from tkinter import *
-
+ 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -21,7 +18,7 @@ class Route:
         self.from_station = from_station
         self.to_station = to_station
 
-    def stringify_route(self):
+    def stringify(self):
         return self.from_station.name + " -> " + self.to_station.name
     
 class Journey:
@@ -47,13 +44,30 @@ class Journey:
               self.journey['switches'],
               '*' if self.journey['deviated_time'] else '')
 
+    def stringify(self):
+        dev_star = '*' if self.journey['deviated_time'] else ''
+        s = ' -> '.join(self.journey['new_deparr']) + " " + \
+            str(self.journey['travel_time']) + " " + \
+            self.journey['travel_plan'] + " " + \
+            str(self.journey['switches']) + " " + \
+            dev_star
+        return s
+
+    def stringify_minimal(self):
+        dev_star = '*' if self.journey['deviated_time'] else ''
+        s = self.journey['new_deparr'][0] + " " + \
+            "(" + str(self.journey['travel_time']) + ") " + \
+            self.journey['travel_plan'] + " " + \
+            dev_star
+        return s
+    
 class Timetable:
     def __init__(self, scraper, route):
         self.route = route
         self.timetable = scraper.scrape(route)
 
     def _print(self):
-        print("Timetable for route " + self.route.stringify_route())
+        print("Timetable for route " + self.route.stringify())
         if self.timetable:
             for journey in self.timetable:
                 journey._print()
@@ -61,6 +75,16 @@ class Timetable:
         else:
             print("No timetable was found")
 
+    def stringify(self):
+        s = """Timetable for route """ + self.route.stringify()
+        if self.timetable:
+            for journey in self.timetable:
+                s += journey.stringify()
+            s += """\n"""
+        else:
+            s += "No timetable was found"
+        return s
+            
 class Timetables:
     def __init__(self, routes):
         self.routes = routes
@@ -73,24 +97,24 @@ class Timetables:
     def _print(self):
         for timetable in self.timetables:
             timetable._print()
-            
+
 class SeleniumScraper:
-    def destroy(self):
-        self.driver.close()
-    
     def __init__(self):
         options = Options()
         options.headless = True
 
-        DRIVER_PATH = "/home/lukas/Downloads/chromedriver"
+        DRIVER_PATH = "/opt/bin/chromedriver"
         self.driver = webdriver.Chrome(options=options, executable_path=DRIVER_PATH)
         self.driver.implicitly_wait(5)
 
+    def destroy(self):
+        self.driver.close()
+    
     def scrape(self, route):
         URL = "https://www.ostgotatrafiken.se/"
         URL += route.from_station.URL_id + "/" + route.to_station.URL_id
         self.driver.get(URL)
-        time.sleep(3)
+        time.sleep(2)
 
         xpath_expr = "//div[@class='departure__item accordion_list__item clearfix expandable main']"
         html_table = self.driver.find_elements_by_xpath(xpath_expr)
@@ -106,7 +130,7 @@ class SeleniumScraper:
             
             deviated_time = True if "-" in l[1] else False
 
-            travel_plan = "" if len(l) - deviated_time < 4 else l[3 + deviated_time]
+            travel_plan = "X" if len(l) - deviated_time < 4 else l[3 + deviated_time]
             travel_time = l[1 + deviated_time]
             switches = l[2 + deviated_time].split(" ")[0]
             dep_time = l[0].split("-")[0].strip()
@@ -124,30 +148,39 @@ class SeleniumScraper:
             timetable.append(journey)
 
         return timetable
+
+class TrafficTracker:
+    def __init__(self):
+        stations = [
+            Station("Matteusskolan", "matteusskolan"),
+            Station("Nkpg Resecentrum", "norrkopings-resecentrum"),
+            Station("Hagaskolan", "hagaskolan-norrkoping"),
+            Station("Lkpg Resecentrum", "linkopings-resecentrum"),
+        ]
     
-def main():
-    stations = [
-        Station("Matteusskolan", "matteusskolan"),
-        Station("Norrköpings Resecentrum", "norrkopings-resecentrum"),
-        Station("Hagaskolan", "hagaskolan-norrkoping"),
-        Station("Linöpings Resecentrum", "linkopings-resecentrum"),
-    ]
-    
-    routes_to_track = [Route(stations[0], stations[1]),
-                       Route(stations[0], stations[2]),
-                       Route(stations[1], stations[3]),
-    ]
+        routes_to_track = [Route(stations[0], stations[1]),
+                           #Route(stations[0], stations[2]),
+                           Route(stations[1], stations[3]),
+        ]
 
-    Timetables(routes_to_track)._print()
-    
-main()    
-
-"""
-requirements:
-$ pip3 install selenium bs4
-
-for selenium: 
-sudo apt install google-chrome
-+ chrome driver
-"""
-
+        self.t = Timetables(routes_to_track)
+        
+    def print_timetables(self):
+        self.t._print()
+        
+    def gui_add(self, gui):
+        print_on_row = 15
+        print_on_col = 80
+        
+        gui.add("Timetables", ("Arial Bold", 12), (print_on_col, print_on_row))
+        print_on_row += 45
+        
+        for k in range(len(self.t.timetables)):
+            timetable = self.t.timetables[k]
+            gui.add(timetable.route.stringify(), ("Arial Bold", 10), (print_on_col, print_on_row))
+            print_on_row += 20
+            for i in range(len(timetable.timetable)):
+                journey = timetable.timetable[i]
+                gui.add(journey.stringify_minimal(), ("Arial Bold", 10), (print_on_col, print_on_row))
+                print_on_row += 20
+            print_on_row += 20
